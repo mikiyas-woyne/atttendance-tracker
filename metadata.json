@@ -1,0 +1,6 @@
+{
+  "name": "ፍሬ ሃይማኖት ሰንበት ትምህርት ቤት - የመገኘት መዝገብ",
+  "description": "የፍሬ ሃይማኖት ሰንበት ትምህርት ቤት የተማሪዎች ምዝገባ እና የመገኘት መዝገብ ማስተዳደሪያ ሥርዓት",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

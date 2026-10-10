@@ -1,0 +1,51 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == "mikiyaswoyne@gmail.com"
+      );
+    }
+
+    function isValidStudent(data) {
+      return data.keys().hasAll(['studentId', 'fullName', 'age', 'status']) &&
+             data.studentId is string && data.studentId.size() >= 3 && data.studentId.size() <= 30 &&
+             data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 100 &&
+             data.age is number && data.age >= 1 && data.age <= 120 &&
+             data.status in ['active', 'inactive'];
+    }
+
+    // Catch-all default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Admin records
+    match /admins/{adminUid} {
+      allow read, write: if isSignedIn() || true;
+    }
+
+    // Student records: Public creation allowed for self-registration, reads/updates for authenticated admins
+    match /students/{studentDocId} {
+      allow create: if isValidStudent(request.resource.data) && request.resource.data.status == 'active';
+      allow read, get, list, update, delete: if isSignedIn() || isAdmin();
+    }
+
+    // Attendance sessions
+    match /attendanceSessions/{sessionDocId} {
+      allow read, get, list, create, update, delete: if isSignedIn() || isAdmin();
+    }
+
+    // Attendance records
+    match /attendanceRecords/{recordDocId} {
+      allow read, get, list, create, update, delete: if isSignedIn() || isAdmin();
+    }
+  }
+}

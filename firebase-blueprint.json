@@ -1,0 +1,220 @@
+{
+  "entities": {
+    "Student": {
+      "title": "Student",
+      "description": "Student registration document for Sunday school",
+      "type": "object",
+      "properties": {
+        "studentId": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 30,
+          "description": "Unique formatted student ID, e.g., FH-2026-0001"
+        },
+        "fullName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100,
+          "description": "Student full name in Amharic or English"
+        },
+        "age": {
+          "type": "number",
+          "description": "Student age in years"
+        },
+        "gender": {
+          "type": "string",
+          "enum": ["ወንድ", "ሴት", "ያልተጠቀሰ"],
+          "description": "Gender of the student"
+        },
+        "phoneNumber": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Student contact phone number"
+        },
+        "guardianPhone": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Parent or guardian contact phone number"
+        },
+        "classId": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Sunday school group or class name"
+        },
+        "registrationDate": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Date string of registration"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "inactive"],
+          "description": "Current registration status of the student"
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Timestamp string of document creation"
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Timestamp string of document last update"
+        }
+      },
+      "required": ["studentId", "fullName", "age", "status"]
+    },
+    "AttendanceSession": {
+      "title": "AttendanceSession",
+      "description": "Session record for a Sunday school meeting",
+      "type": "object",
+      "properties": {
+        "sessionId": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 100,
+          "description": "Unique session identifier"
+        },
+        "meetingDate": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Meeting date formatted as YYYY-MM-DD"
+        },
+        "classId": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Class or group identifier"
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Optional notes for the session"
+        },
+        "createdBy": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Admin UID who created the session"
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Timestamp string of creation"
+        }
+      },
+      "required": ["sessionId", "meetingDate", "classId", "createdBy"]
+    },
+    "AttendanceRecord": {
+      "title": "AttendanceRecord",
+      "description": "Individual student attendance status for a session",
+      "type": "object",
+      "properties": {
+        "recordId": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 150,
+          "description": "Unique record ID formed as sessionId_studentId"
+        },
+        "sessionId": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Parent session ID"
+        },
+        "studentId": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Student ID"
+        },
+        "studentName": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Student full name snapshot"
+        },
+        "classId": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Class or group identifier"
+        },
+        "meetingDate": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Meeting date YYYY-MM-DD"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["present", "absent", "excused"],
+          "description": "Attendance status in Amharic/English code"
+        },
+        "markedBy": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Admin UID who recorded the status"
+        },
+        "markedAt": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Timestamp string of initial mark"
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Timestamp string of last update"
+        }
+      },
+      "required": ["recordId", "sessionId", "studentId", "meetingDate", "status"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Authorized administrator record",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Firebase Auth UID of administrator"
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 150,
+          "description": "Admin email address"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin"],
+          "description": "Administrator role"
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "Timestamp of admin account setup"
+        }
+      },
+      "required": ["uid", "email", "role"]
+    }
+  },
+  "firestore": {
+    "/students/{studentDocId}": {
+      "schema": {
+        "$ref": "#/entities/Student"
+      },
+      "description": "Collection of Sunday school student registrations"
+    },
+    "/attendanceSessions/{sessionDocId}": {
+      "schema": {
+        "$ref": "#/entities/AttendanceSession"
+      },
+      "description": "Collection of meeting sessions"
+    },
+    "/attendanceRecords/{recordDocId}": {
+      "schema": {
+        "$ref": "#/entities/AttendanceRecord"
+      },
+      "description": "Collection of individual student attendance records"
+    },
+    "/admins/{adminUid}": {
+      "schema": {
+        "$ref": "#/entities/Admin"
+      },
+      "description": "Collection of authorized administrators"
+    }
+  }
+}
