@@ -62,23 +62,23 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl border border-amber-300 max-w-md w-full overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/70 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl border border-amber-300 max-w-md w-full overflow-hidden max-h-[90vh] flex flex-col">
         
         {/* Header */}
-        <div className="bg-gradient-to-r from-red-950 via-red-900 to-amber-950 text-white p-6 relative">
+        <div className="bg-gradient-to-r from-red-950 via-red-900 to-amber-950 text-white p-5 sm:p-6 relative shrink-0">
           <button
             onClick={onClose}
-            className="absolute top-4 left-4 p-1 rounded-lg text-amber-200/80 hover:text-white hover:bg-red-800/50 transition-colors"
+            className="absolute top-4 left-4 p-1.5 rounded-lg text-amber-200/80 hover:text-white hover:bg-red-800/50 active:scale-95 transition-all"
           >
             <X className="w-5 h-5" />
           </button>
 
           <div className="text-center pt-2">
-            <div className="w-12 h-12 bg-amber-500/20 border-2 border-amber-400/50 rounded-full flex items-center justify-center text-amber-300 mx-auto mb-2 shadow-inner">
-              <EthiopianOrthodoxCross className="w-7 h-7 text-amber-300" />
+            <div className="w-11 h-11 sm:w-12 sm:h-12 bg-amber-500/20 border-2 border-amber-400/50 rounded-full flex items-center justify-center text-amber-300 mx-auto mb-2 shadow-inner">
+              <EthiopianOrthodoxCross className="w-6 h-6 sm:w-7 sm:h-7 text-amber-300" />
             </div>
-            <h3 className="text-xl font-bold text-amber-200 font-serif">
+            <h3 className="text-lg sm:text-xl font-bold text-amber-200 font-serif">
               የአስተዳዳሪ መግቢያ
             </h3>
             <p className="text-xs text-amber-100/80 mt-1">
@@ -87,7 +87,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
           </div>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
           {errorMsg && (
             <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs flex items-start gap-2.5">
               <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />

@@ -20,14 +20,7 @@ const AppContent: React.FC = () => {
   const [statusStudentId, setStatusStudentId] = useState<string>(savedDeviceId);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState<boolean>(false);
 
-  useEffect(() => {
-    if (savedDeviceId && !isAdmin && activeTab === 'register') {
-      // If student has registered on this device, default to showing their attendance status
-      setActiveTab('status');
-      setStatusStudentId(savedDeviceId);
-    }
-  }, [savedDeviceId, isAdmin]);
-
+  // Note: Initial tab is already defaulted in useState based on savedDeviceId
   const handleSelectTab = (tab: 'register' | 'status' | 'admin') => {
     if (tab === 'admin' && !isAdmin) {
       setIsAdminModalOpen(true);

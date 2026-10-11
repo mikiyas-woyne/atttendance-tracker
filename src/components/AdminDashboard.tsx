@@ -577,11 +577,11 @@ export const AdminDashboard: React.FC = () => {
 
               <button
                 onClick={() => setShowManualAddModal(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-500 hover:bg-amber-400 text-red-950 font-bold rounded-xl text-xs sm:text-sm shadow transition-all shrink-0 border border-amber-400/60"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-500 hover:bg-amber-400 text-red-950 font-bold rounded-xl text-xs sm:text-sm shadow transition-all shrink-0 border border-amber-400/60 active:scale-95"
               >
                 <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="hidden xs:inline">+ አዲስ ተማሪ</span>
-                <span className="xs:hidden">+ አዲስ</span>
+                <span className="hidden sm:inline">+ አዲስ ተማሪ</span>
+                <span className="sm:hidden">+ አዲስ</span>
               </button>
             </div>
           </div>
@@ -639,22 +639,18 @@ export const AdminDashboard: React.FC = () => {
         <>
           {/* TAB 1: STUDENTS & ATTENDANCE (ተማሪዎች እና አቴንዳንስ) */}
           {activeMainTab === 'attendance' && (
-            <div className="space-y-3 sm:space-y-4 animate-fade-in">
+            <div className="space-y-3 sm:space-y-4 pb-28 sm:pb-8 animate-fade-in">
               
               {/* Date & Session Status Summary Toolbar */}
               <div className="bg-white p-3 sm:p-4 rounded-2xl shadow-2xs border border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <div className="flex flex-wrap items-center gap-1.5 bg-slate-50 p-1.5 sm:p-2 rounded-xl border border-slate-200">
-                    <div className="flex items-center gap-1 text-xs font-bold text-amber-950">
-                      <Calendar className="w-4 h-4 text-amber-700 shrink-0" />
-                    </div>
-
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2.5">
+                  <div className="grid grid-cols-3 sm:flex items-center gap-1.5 bg-slate-50 p-1.5 sm:p-2 rounded-xl border border-slate-200">
                     {/* Day Dropdown */}
                     <select
                       value={ethDay}
                       onChange={(e) => setEthDay(Number(e.target.value))}
-                      className="px-2 py-1 rounded-lg border border-slate-300 font-bold text-slate-900 text-xs bg-white outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+                      className="w-full px-2 py-1.5 sm:py-1 rounded-lg border border-slate-300 font-bold text-slate-900 text-xs bg-white outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
                     >
                       {Array.from({ length: ethMonth === 13 ? 6 : 30 }, (_, i) => i + 1).map((d) => (
                         <option key={d} value={d}>
@@ -672,7 +668,7 @@ export const AdminDashboard: React.FC = () => {
                         const maxD = m === 13 ? 6 : 30;
                         if (ethDay > maxD) setEthDay(maxD);
                       }}
-                      className="px-2 py-1 rounded-lg border border-slate-300 font-bold text-slate-900 text-xs bg-white outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+                      className="w-full px-2 py-1.5 sm:py-1 rounded-lg border border-slate-300 font-bold text-slate-900 text-xs bg-white outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
                     >
                       {ETHIOPIC_MONTHS.map((mName, idx) => (
                         <option key={mName} value={idx + 1}>
@@ -685,7 +681,7 @@ export const AdminDashboard: React.FC = () => {
                     <select
                       value={ethYear}
                       onChange={(e) => setEthYear(Number(e.target.value))}
-                      className="px-2 py-1 rounded-lg border border-slate-300 font-mono font-bold text-slate-900 text-xs bg-white outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+                      className="w-full px-2 py-1.5 sm:py-1 rounded-lg border border-slate-300 font-mono font-bold text-slate-900 text-xs bg-white outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
                     >
                       {[2016, 2017, 2018, 2019, 2020, 2021, 2022].map((y) => (
                         <option key={y} value={y}>
@@ -695,28 +691,30 @@ export const AdminDashboard: React.FC = () => {
                     </select>
                   </div>
 
-                  {isDateAlreadyRecorded ? (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] sm:text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
-                      <span>አቴንዳንስ ተመዝግቧል</span>
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] sm:text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                      <Clock className="w-3.5 h-3.5 text-amber-800" />
-                      <span>አልተመዘገበም</span>
-                    </span>
-                  )}
+                  <div className="flex items-center justify-between sm:justify-start gap-2">
+                    {isDateAlreadyRecorded ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] sm:text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>አቴንዳንስ ተመዝግቧል</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] sm:text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                        <Clock className="w-3.5 h-3.5 text-amber-800" />
+                        <span>አልተመዘገበም</span>
+                      </span>
+                    )}
 
-                  <div className="bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200 text-[11px] sm:text-xs text-slate-700 font-bold ml-auto sm:ml-0">
-                    ተማሪዎች፡ <span className="text-amber-950 font-mono font-extrabold">{students.length}</span>
+                    <div className="bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200 text-[11px] sm:text-xs text-slate-700 font-bold">
+                      ተማሪዎች፡ <span className="text-amber-950 font-mono font-extrabold">{students.length}</span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Top Action Buttons */}
-                <div className="flex items-center justify-end gap-2">
+                <div className="grid grid-cols-2 sm:flex items-center justify-end gap-2 w-full sm:w-auto">
                   <button
                     onClick={handleMarkAllPresent}
-                    className="flex-1 sm:flex-initial px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold text-xs border border-amber-300 transition-all flex items-center justify-center gap-1 min-h-[36px]"
+                    className="px-3 py-2 sm:py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold text-xs border border-amber-300 transition-all flex items-center justify-center gap-1 min-h-[38px] active:scale-95"
                   >
                     <CheckSquare className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
                     <span>ሁሉንም ተገኝቷል በል</span>
@@ -725,7 +723,7 @@ export const AdminDashboard: React.FC = () => {
                   <button
                     onClick={handleSaveAttendance}
                     disabled={savingAttendance}
-                    className="flex-1 sm:flex-initial px-4 py-1.5 rounded-xl bg-gradient-to-r from-red-950 to-amber-950 hover:from-red-900 hover:to-amber-900 text-amber-200 font-bold text-xs sm:text-sm shadow-sm transition-all flex items-center justify-center gap-1.5 border border-amber-400/40 disabled:opacity-50 min-h-[36px]"
+                    className="px-4 py-2 sm:py-1.5 rounded-xl bg-gradient-to-r from-red-950 to-amber-950 hover:from-red-900 hover:to-amber-900 text-amber-200 font-bold text-xs sm:text-sm shadow-sm transition-all flex items-center justify-center gap-1.5 border border-amber-400/40 disabled:opacity-50 min-h-[38px] active:scale-95"
                   >
                     {savingAttendance ? (
                       <Loader2 className="w-4 h-4 animate-spin text-amber-300 shrink-0" />
@@ -754,7 +752,7 @@ export const AdminDashboard: React.FC = () => {
                 </div>
 
                 {/* Mobile Scrollable Filter Pills */}
-                <div className="flex items-center gap-1 overflow-x-auto pb-0.5 text-[11px] sm:text-xs no-scrollbar w-full sm:w-auto">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar w-full sm:w-auto flex-nowrap">
                   {(['all', 'present', 'absent', 'excused'] as const).map((filterKey) => {
                     let count = 0;
                     if (filterKey === 'all') count = activeStudents.length;
@@ -766,7 +764,7 @@ export const AdminDashboard: React.FC = () => {
                       <button
                         key={filterKey}
                         onClick={() => setAttendanceStatusFilter(filterKey)}
-                        className={`px-2.5 py-1 rounded-xl font-bold transition-all whitespace-nowrap shrink-0 flex items-center gap-1 ${
+                        className={`px-3 py-1.5 rounded-xl font-bold transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 active:scale-95 ${
                           attendanceStatusFilter === filterKey
                             ? 'bg-amber-500 text-red-950 font-extrabold shadow-2xs'
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -778,7 +776,7 @@ export const AdminDashboard: React.FC = () => {
                           {filterKey === 'absent' && 'አልተገኘም'}
                           {filterKey === 'excused' && 'በምክንያት'}
                         </span>
-                        <span className={`px-1 py-0.2 rounded-full text-[10px] ${
+                        <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
                           attendanceStatusFilter === filterKey ? 'bg-red-950 text-amber-200' : 'bg-slate-200 text-slate-700'
                         }`}>
                           {count}
@@ -805,126 +803,118 @@ export const AdminDashboard: React.FC = () => {
                       return (
                         <div
                           key={student.studentId}
-                          className="p-2.5 sm:p-3.5 hover:bg-slate-50/80 transition-colors"
+                          className="p-3 sm:p-3.5 hover:bg-slate-50/80 transition-colors"
                         >
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                            
-                            {/* Left: Student Name & Secondary Details (Single Name Display) */}
+                          {/* Row 1: Student ID & Name on left, Row Actions on right */}
+                          <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-2 min-w-0 flex-1">
                               <span className="px-1.5 py-0.5 rounded font-mono font-bold text-[11px] bg-amber-100 text-amber-950 border border-amber-300 shrink-0">
                                 {student.studentId}
                               </span>
-
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="font-bold text-slate-900 text-xs sm:text-sm truncate">
-                                    {student.fullName}
-                                  </span>
-                                  {student.status === 'inactive' && (
-                                    <span className="text-[9px] font-bold bg-slate-200 text-slate-600 px-1 py-0.2 rounded shrink-0">
-                                      ያልተገለገለ
-                                    </span>
-                                  )}
-                                </div>
-
-                                <div className="text-[11px] text-slate-500 flex items-center gap-1.5 truncate mt-0.5">
-                                  <span>ዕድሜ፡ {student.age}</span>
-                                  {student.phoneNumber && <span>• {student.phoneNumber}</span>}
-                                  {!student.phoneNumber && student.guardianPhone && (
-                                    <span>• የወላጅ፡ {student.guardianPhone}</span>
-                                  )}
-                                </div>
-                              </div>
+                              <span className="font-bold text-slate-900 text-xs sm:text-sm truncate">
+                                {student.fullName}
+                              </span>
+                              {student.status === 'inactive' && (
+                                <span className="text-[9px] font-bold bg-slate-200 text-slate-600 px-1 py-0.2 rounded shrink-0">
+                                  ያልተገለገለ
+                                </span>
+                              )}
                             </div>
 
-                            {/* Right: Attendance Toggle Group & Action Menu */}
-                            <div className="flex items-center justify-between sm:justify-end gap-1.5 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-                              
-                              {/* 3 Status Buttons */}
-                              <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200">
-                                <button
-                                  type="button"
-                                  onClick={() => handleSetStudentStatus(student.studentId, 'present')}
-                                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 min-h-[32px] ${
-                                    currentStatus === 'present'
-                                      ? 'bg-emerald-600 text-white shadow-2xs'
-                                      : 'text-slate-700 hover:text-emerald-700 hover:bg-emerald-50'
-                                  }`}
-                                >
-                                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                                  <span>ተገኝቷል</span>
-                                </button>
+                            {/* Row Action Icons with good spacing and touch targets */}
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                onClick={() => setSelectedStudentForHistory(student)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-amber-900 hover:bg-amber-100/70 active:bg-amber-200 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
+                                title="የመገኘት ታሪክ"
+                              >
+                                <History className="w-3.5 h-3.5" />
+                              </button>
 
-                                <button
-                                  type="button"
-                                  onClick={() => handleSetStudentStatus(student.studentId, 'absent')}
-                                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 min-h-[32px] ${
-                                    currentStatus === 'absent'
-                                      ? 'bg-red-600 text-white shadow-2xs'
-                                      : 'text-slate-700 hover:text-red-700 hover:bg-red-50'
-                                  }`}
-                                >
-                                  <XCircle className="w-3.5 h-3.5 shrink-0" />
-                                  <span>አልተገኘም</span>
-                                </button>
+                              <button
+                                onClick={() => setEditingStudent(student)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-amber-900 hover:bg-amber-100/70 active:bg-amber-200 transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center"
+                                title="መረጃ አስተካክል"
+                              >
+                                <Edit className="w-3.5 h-3.5" />
+                              </button>
 
-                                <button
-                                  type="button"
-                                  onClick={() => handleSetStudentStatus(student.studentId, 'excused')}
-                                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 min-h-[32px] ${
-                                    currentStatus === 'excused'
-                                      ? 'bg-amber-600 text-white shadow-2xs'
-                                      : 'text-slate-700 hover:text-amber-700 hover:bg-amber-50'
-                                  }`}
-                                >
-                                  <Clock className="w-3.5 h-3.5 shrink-0" />
-                                  <span>በምክንያት</span>
-                                </button>
-                              </div>
+                              <button
+                                onClick={() => handleToggleStudentStatus(student)}
+                                className={`p-1.5 rounded-lg transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center ${
+                                  student.status === 'active'
+                                    ? 'text-slate-400 hover:text-red-600 hover:bg-red-50'
+                                    : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'
+                                }`}
+                                title={student.status === 'active' ? 'አቦዝን' : 'አንቀሳቅስ'}
+                              >
+                                {student.status === 'active' ? <X className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
+                              </button>
+                            </div>
+                          </div>
 
-                              {/* Row Action Icons */}
-                              <div className="flex items-center gap-0.5 border-l border-slate-200 pl-1">
-                                <button
-                                  onClick={() => setSelectedStudentForHistory(student)}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-amber-900 hover:bg-amber-50 transition-colors"
-                                  title="የመገኘት ታሪክ"
-                                >
-                                  <History className="w-3.5 h-3.5" />
-                                </button>
+                          {/* Row 2: Secondary info */}
+                          <div className="text-[11px] text-slate-500 flex items-center gap-1.5 truncate mt-0.5 mb-2 sm:mb-0">
+                            <span>ዕድሜ፡ {student.age}</span>
+                            {student.phoneNumber && <span>• {student.phoneNumber}</span>}
+                            {!student.phoneNumber && student.guardianPhone && (
+                              <span>• የወላጅ፡ {student.guardianPhone}</span>
+                            )}
+                          </div>
 
-                                <button
-                                  onClick={() => setEditingStudent(student)}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-amber-900 hover:bg-amber-50 transition-colors"
-                                  title="መረጃ አስተካክል"
-                                >
-                                  <Edit className="w-3.5 h-3.5" />
-                                </button>
+                          {/* Row 3: Attendance Toggle Group (Full width on mobile, right-aligned on desktop) */}
+                          <div className="mt-2 sm:mt-1.5 flex flex-col sm:flex-row sm:items-center sm:justify-end">
+                            <div className="grid grid-cols-3 gap-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200 w-full sm:w-auto">
+                              <button
+                                type="button"
+                                onClick={() => handleSetStudentStatus(student.studentId, 'present')}
+                                className={`px-2 py-2 sm:py-1 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 min-h-[38px] sm:min-h-[32px] active:scale-95 ${
+                                  currentStatus === 'present'
+                                    ? 'bg-emerald-600 text-white shadow-2xs'
+                                    : 'text-slate-700 hover:text-emerald-700 hover:bg-emerald-50'
+                                }`}
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                                <span>ተገኝቷል</span>
+                              </button>
 
-                                <button
-                                  onClick={() => handleToggleStudentStatus(student)}
-                                  className={`p-1.5 rounded-lg transition-colors ${
-                                    student.status === 'active'
-                                      ? 'text-slate-400 hover:text-red-600 hover:bg-red-50'
-                                      : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'
-                                  }`}
-                                  title={student.status === 'active' ? 'አቦዝን' : 'አንቀሳቅስ'}
-                                >
-                                  {student.status === 'active' ? <X className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
-                                </button>
-                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleSetStudentStatus(student.studentId, 'absent')}
+                                className={`px-2 py-2 sm:py-1 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 min-h-[38px] sm:min-h-[32px] active:scale-95 ${
+                                  currentStatus === 'absent'
+                                    ? 'bg-red-600 text-white shadow-2xs'
+                                    : 'text-slate-700 hover:text-red-700 hover:bg-red-50'
+                                }`}
+                              >
+                                <XCircle className="w-3.5 h-3.5 shrink-0" />
+                                <span>አልተገኘም</span>
+                              </button>
 
+                              <button
+                                type="button"
+                                onClick={() => handleSetStudentStatus(student.studentId, 'excused')}
+                                className={`px-2 py-2 sm:py-1 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 min-h-[38px] sm:min-h-[32px] active:scale-95 ${
+                                  currentStatus === 'excused'
+                                    ? 'bg-amber-600 text-white shadow-2xs'
+                                    : 'text-slate-700 hover:text-amber-700 hover:bg-amber-50'
+                                }`}
+                              >
+                                <Clock className="w-3.5 h-3.5 shrink-0" />
+                                <span>በምክንያት</span>
+                              </button>
                             </div>
                           </div>
 
                           {/* Optional Reason Input when "በምክንያት" is selected */}
                           {currentStatus === 'excused' && (
-                            <div className="mt-1.5 pt-1 border-t border-amber-200/50">
+                            <div className="mt-2 pt-1 border-t border-amber-200/50">
                               <input
                                 type="text"
                                 value={statusEntry.reason || ''}
                                 onChange={(e) => handleSetExcusedReason(student.studentId, e.target.value)}
                                 placeholder="የመቅረት ምክንያት ያስገቡ (ለምሳሌ፡ የታመመ፣ የቤተሰብ ጉዳይ)..."
-                                className="px-2.5 py-1 rounded-lg border border-amber-300 text-xs text-slate-800 bg-amber-50/70 focus:bg-white outline-none w-full sm:max-w-md"
+                                className="px-3 py-2 sm:py-1 rounded-lg border border-amber-300 text-xs text-slate-800 bg-amber-50/70 focus:bg-white outline-none w-full"
                               />
                             </div>
                           )}
@@ -937,14 +927,17 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               {/* Bottom Sticky Action Bar on Mobile */}
-              <div className="sticky bottom-3 z-30 bg-white/95 backdrop-blur-xs p-3 rounded-2xl shadow-xl border border-amber-300/60 flex items-center justify-between gap-3">
-                <span className="text-[11px] sm:text-xs font-bold text-slate-700 truncate">
-                  የቀን {formatEthStringDate(selectedMeetingDate)} አቴንዳንስ፡
-                </span>
+              <div className="sticky bottom-3 z-30 bg-white/95 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-amber-300/80 flex items-center justify-between gap-2.5">
+                <div className="min-w-0">
+                  <p className="text-[10px] text-slate-500 font-medium">የተመረጠው ቀን፡</p>
+                  <p className="text-xs font-bold text-amber-950 font-serif truncate">
+                    {formatEthStringDate(selectedMeetingDate)}
+                  </p>
+                </div>
                 <button
                   onClick={handleSaveAttendance}
                   disabled={savingAttendance}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-red-950 to-amber-950 hover:from-red-900 hover:to-amber-900 text-amber-200 font-extrabold text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 border border-amber-400/40 disabled:opacity-50 shrink-0"
+                  className="px-4 py-2.5 sm:px-5 sm:py-2 rounded-xl bg-gradient-to-r from-red-950 to-amber-950 hover:from-red-900 hover:to-amber-900 text-amber-200 font-extrabold text-xs sm:text-sm shadow-md transition-all flex items-center gap-1.5 border border-amber-400/40 disabled:opacity-50 shrink-0 min-h-[42px] active:scale-95"
                 >
                   {savingAttendance ? (
                     <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
@@ -965,10 +958,10 @@ export const AdminDashboard: React.FC = () => {
               {/* Reports Sub-Navigation & Export PNG Action */}
               <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
                 
-                <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar w-full md:w-auto flex-nowrap text-xs font-bold">
                   <button
                     onClick={() => setReportSubTab('overall')}
-                    className={`px-4 py-2 rounded-xl transition-all ${
+                    className={`px-3.5 py-2 rounded-xl transition-all whitespace-nowrap shrink-0 active:scale-95 ${
                       reportSubTab === 'overall'
                         ? 'bg-amber-500 text-red-950 font-extrabold shadow-xs'
                         : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -979,7 +972,7 @@ export const AdminDashboard: React.FC = () => {
 
                   <button
                     onClick={() => setReportSubTab('individual')}
-                    className={`px-4 py-2 rounded-xl transition-all ${
+                    className={`px-3.5 py-2 rounded-xl transition-all whitespace-nowrap shrink-0 active:scale-95 ${
                       reportSubTab === 'individual'
                         ? 'bg-amber-500 text-red-950 font-extrabold shadow-xs'
                         : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -990,7 +983,7 @@ export const AdminDashboard: React.FC = () => {
 
                   <button
                     onClick={() => setReportSubTab('monthly')}
-                    className={`px-4 py-2 rounded-xl transition-all ${
+                    className={`px-3.5 py-2 rounded-xl transition-all whitespace-nowrap shrink-0 active:scale-95 ${
                       reportSubTab === 'monthly'
                         ? 'bg-amber-500 text-red-950 font-extrabold shadow-xs'
                         : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -1001,7 +994,7 @@ export const AdminDashboard: React.FC = () => {
 
                   <button
                     onClick={() => setReportSubTab('ranking')}
-                    className={`px-4 py-2 rounded-xl transition-all ${
+                    className={`px-3.5 py-2 rounded-xl transition-all whitespace-nowrap shrink-0 active:scale-95 ${
                       reportSubTab === 'ranking'
                         ? 'bg-amber-500 text-red-950 font-extrabold shadow-xs'
                         : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -1014,7 +1007,7 @@ export const AdminDashboard: React.FC = () => {
                 <button
                   onClick={() => handleExportPNG(reportSubTab)}
                   disabled={isExportingPNG}
-                  className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-red-950 font-extrabold text-xs flex items-center gap-2 transition-all shadow border border-amber-400/60 disabled:opacity-50"
+                  className="w-full md:w-auto px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-red-950 font-extrabold text-xs flex items-center justify-center gap-2 transition-all shadow border border-amber-400/60 disabled:opacity-50 active:scale-95"
                 >
                   {isExportingPNG ? (
                     <Loader2 className="w-4 h-4 animate-spin text-red-950" />
@@ -1420,9 +1413,9 @@ export const AdminDashboard: React.FC = () => {
 
       {/* MODAL 1: Student Attendance History Modal */}
       {selectedStudentForHistory && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-300 max-w-lg w-full overflow-hidden">
-            <div className="bg-red-950 text-white p-5 flex items-center justify-between border-b border-amber-500/30">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-300 max-w-lg w-full overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="bg-red-950 text-white p-4 sm:p-5 flex items-center justify-between border-b border-amber-500/30 shrink-0">
               <div>
                 <h3 className="font-bold text-amber-200 text-base font-serif">የተማሪ የመገኘት ታሪክ</h3>
                 <p className="text-xs text-amber-100/80 mt-0.5">
@@ -1431,13 +1424,13 @@ export const AdminDashboard: React.FC = () => {
               </div>
               <button
                 onClick={() => setSelectedStudentForHistory(null)}
-                className="p-1 rounded text-amber-200 hover:text-white"
+                className="p-1.5 rounded-lg text-amber-200 hover:text-white active:scale-95 transition-all"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-5 max-h-96 overflow-y-auto space-y-2 text-xs">
+            <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-2 text-xs">
               {records.filter((r) => r.studentId === selectedStudentForHistory.studentId).length === 0 ? (
                 <p className="text-center py-6 text-slate-500">
                   እስካሁን ምንም የተመዘገበ የመገኘት ታሪክ አልተገኘም።
@@ -1480,19 +1473,19 @@ export const AdminDashboard: React.FC = () => {
 
       {/* MODAL 2: Edit Student Info */}
       {editingStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-300 max-w-md w-full overflow-hidden">
-            <div className="bg-red-950 text-white p-5 flex items-center justify-between border-b border-amber-500/30">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-300 max-w-md w-full overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="bg-red-950 text-white p-4 sm:p-5 flex items-center justify-between border-b border-amber-500/30 shrink-0">
               <h3 className="font-bold text-amber-200 text-base font-serif">የተማሪ መረጃ ማስተካከያ</h3>
               <button
                 onClick={() => setEditingStudent(null)}
-                className="p-1 rounded text-amber-200 hover:text-white"
+                className="p-1.5 rounded-lg text-amber-200 hover:text-white active:scale-95 transition-all"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveEditStudent} className="p-5 space-y-4 text-sm">
+            <form onSubmit={handleSaveEditStudent} className="p-4 sm:p-5 space-y-4 text-sm overflow-y-auto flex-1">
               <div>
                 <label className="block font-bold text-xs text-slate-700 mb-1">ሙሉ ስም</label>
                 <input
@@ -1500,7 +1493,7 @@ export const AdminDashboard: React.FC = () => {
                   required
                   value={editingStudent.fullName}
                   onChange={(e) => setEditingStudent({ ...editingStudent, fullName: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-800 outline-none"
+                  className="w-full px-3 py-2.5 sm:py-2 rounded-xl border border-slate-300 text-slate-800 outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
@@ -1512,7 +1505,7 @@ export const AdminDashboard: React.FC = () => {
                     required
                     value={editingStudent.age}
                     onChange={(e) => setEditingStudent({ ...editingStudent, age: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-800 outline-none"
+                    className="w-full px-3 py-2.5 sm:py-2 rounded-xl border border-slate-300 text-slate-800 outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
                 <div>
@@ -1520,7 +1513,7 @@ export const AdminDashboard: React.FC = () => {
                   <select
                     value={editingStudent.gender || 'ወንድ'}
                     onChange={(e) => setEditingStudent({ ...editingStudent, gender: e.target.value as any })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-800 outline-none bg-white"
+                    className="w-full px-3 py-2.5 sm:py-2 rounded-xl border border-slate-300 text-slate-800 outline-none bg-white focus:ring-2 focus:ring-amber-500"
                   >
                     <option value="ወንድ">ወንድ</option>
                     <option value="ሴት">ሴት</option>
@@ -1535,7 +1528,7 @@ export const AdminDashboard: React.FC = () => {
                   type="tel"
                   value={editingStudent.phoneNumber || ''}
                   onChange={(e) => setEditingStudent({ ...editingStudent, phoneNumber: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-800 outline-none"
+                  className="w-full px-3 py-2.5 sm:py-2 rounded-xl border border-slate-300 text-slate-800 outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
@@ -1545,7 +1538,7 @@ export const AdminDashboard: React.FC = () => {
                   type="tel"
                   value={editingStudent.guardianPhone || ''}
                   onChange={(e) => setEditingStudent({ ...editingStudent, guardianPhone: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-800 outline-none"
+                  className="w-full px-3 py-2.5 sm:py-2 rounded-xl border border-slate-300 text-slate-800 outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
@@ -1553,13 +1546,13 @@ export const AdminDashboard: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setEditingStudent(null)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs active:scale-95 transition-all min-h-[38px]"
                 >
                   ሰርዝ
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-red-950 font-bold text-xs shadow"
+                  className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-red-950 font-bold text-xs shadow active:scale-95 transition-all min-h-[38px]"
                 >
                   መረጃውን አስቀምጥ
                 </button>
@@ -1571,19 +1564,19 @@ export const AdminDashboard: React.FC = () => {
 
       {/* MODAL 3: Manual Student Add Modal */}
       {showManualAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-300 max-w-md w-full overflow-hidden">
-            <div className="bg-red-950 text-white p-5 flex items-center justify-between border-b border-amber-500/30">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-300 max-w-md w-full overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="bg-red-950 text-white p-4 sm:p-5 flex items-center justify-between border-b border-amber-500/30 shrink-0">
               <h3 className="font-bold text-amber-200 text-base font-serif">አዲስ ተማሪ በእጅ መመዝገቢያ</h3>
               <button
                 onClick={() => setShowManualAddModal(false)}
-                className="p-1 rounded text-amber-200 hover:text-white"
+                className="p-1.5 rounded-lg text-amber-200 hover:text-white active:scale-95 transition-all"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleManualAddStudent} className="p-5 space-y-4 text-sm">
+            <form onSubmit={handleManualAddStudent} className="p-4 sm:p-5 space-y-4 text-sm overflow-y-auto flex-1">
               <div>
                 <label className="block font-bold text-xs text-slate-700 mb-1">
                   1. ሙሉ ስም <span className="text-red-600">*</span>
@@ -1594,7 +1587,7 @@ export const AdminDashboard: React.FC = () => {
                   value={manualName}
                   onChange={(e) => setManualName(e.target.value)}
                   placeholder="ሙሉ ስም ያስገቡ"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-800 outline-none"
+                  className="w-full px-3 py-2.5 sm:py-2 rounded-xl border border-slate-300 text-slate-800 outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
@@ -1611,7 +1604,7 @@ export const AdminDashboard: React.FC = () => {
                     value={manualAge}
                     onChange={(e) => setManualAge(e.target.value)}
                     placeholder="ዕድሜ"
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-800 outline-none"
+                    className="w-full px-3 py-2.5 sm:py-2 rounded-xl border border-slate-300 text-slate-800 outline-none focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
                 <div>
@@ -1619,7 +1612,7 @@ export const AdminDashboard: React.FC = () => {
                   <select
                     value={manualGender}
                     onChange={(e) => setManualGender(e.target.value as any)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-800 outline-none bg-white"
+                    className="w-full px-3 py-2.5 sm:py-2 rounded-xl border border-slate-300 text-slate-800 outline-none bg-white focus:ring-2 focus:ring-amber-500"
                   >
                     <option value="ወንድ">ወንድ</option>
                     <option value="ሴት">ሴት</option>
@@ -1637,7 +1630,7 @@ export const AdminDashboard: React.FC = () => {
                   value={manualPhone}
                   onChange={(e) => setManualPhone(e.target.value)}
                   placeholder="09..."
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-800 outline-none"
+                  className="w-full px-3 py-2.5 sm:py-2 rounded-xl border border-slate-300 text-slate-800 outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
@@ -1650,7 +1643,7 @@ export const AdminDashboard: React.FC = () => {
                   value={manualGuardian}
                   onChange={(e) => setManualGuardian(e.target.value)}
                   placeholder="09..."
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-800 outline-none"
+                  className="w-full px-3 py-2.5 sm:py-2 rounded-xl border border-slate-300 text-slate-800 outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </div>
 
@@ -1658,13 +1651,13 @@ export const AdminDashboard: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowManualAddModal(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs"
+                  className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs active:scale-95 transition-all min-h-[38px]"
                 >
                   ሰርዝ
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-red-950 hover:bg-red-900 text-amber-200 font-bold text-xs shadow border border-amber-400/40"
+                  className="px-5 py-2.5 rounded-xl bg-red-950 hover:bg-red-900 text-amber-200 font-bold text-xs shadow border border-amber-400/40 active:scale-95 transition-all min-h-[38px]"
                 >
                   ተማሪውን መዝግብ
                 </button>

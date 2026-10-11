@@ -83,21 +83,21 @@ export const AbsenceNotificationModal: React.FC<AbsenceNotificationModalProps> =
       <div className="bg-white rounded-3xl shadow-2xl border border-amber-300 w-full max-w-2xl overflow-hidden my-auto flex flex-col max-h-[90vh]">
         
         {/* Header */}
-        <div className="bg-gradient-to-r from-red-950 via-red-900 to-amber-950 p-4 sm:p-5 text-amber-100 flex items-center justify-between border-b-2 border-amber-500/50 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center relative shrink-0">
-              <Bell className="w-5 h-5 text-amber-300 animate-bounce" />
+        <div className="bg-gradient-to-r from-red-950 via-red-900 to-amber-950 p-3.5 sm:p-5 text-amber-100 flex items-center justify-between border-b-2 border-amber-500/50 shrink-0 gap-2">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center relative shrink-0">
+              <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300 animate-bounce" />
               {unreadAlerts.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-600 text-white font-extrabold text-[10px] w-5 h-5 rounded-full flex items-center justify-center border-2 border-red-950 animate-pulse">
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white font-extrabold text-[10px] w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center border-2 border-red-950 animate-pulse">
                   {unreadAlerts.length}
                 </span>
               )}
             </div>
-            <div>
-              <h3 className="font-bold text-base sm:text-lg text-amber-200 font-serif leading-tight">
+            <div className="min-w-0 flex-1">
+              <h3 className="font-bold text-xs sm:text-base md:text-lg text-amber-200 font-serif leading-tight truncate">
                 የ4 ሳምንት ተከታታይ መቅረት ማሳወቂያዎች
               </h3>
-              <p className="text-xs text-amber-100/80 font-medium">
+              <p className="text-[11px] sm:text-xs text-amber-100/80 font-medium truncate">
                 የአስተዳዳሪ ብቻ የክትትል ጥሪ ጥቆማዎች ({unreadAlerts.length} ያልተነበቡ)
               </p>
             </div>
@@ -105,7 +105,7 @@ export const AbsenceNotificationModal: React.FC<AbsenceNotificationModalProps> =
 
           <button
             onClick={onClose}
-            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-amber-200 transition-colors"
+            className="p-1.5 sm:p-2 rounded-xl bg-white/10 hover:bg-white/20 text-amber-200 active:scale-95 transition-all shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
