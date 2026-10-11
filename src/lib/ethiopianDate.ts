@@ -77,3 +77,19 @@ export function formatEthiopianDateFull(day: number, monthIndex: number, year: n
   const monthName = ETHIOPIC_MONTHS[monthIndex - 1] || 'መስከረም';
   return `${monthName} ${day} ቀን ${year} ዓ.ም`;
 }
+
+export function formatEthStringDate(dateStr: string): string {
+  if (!dateStr || typeof dateStr !== 'string') return dateStr || '';
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    const year = parts[0];
+    const month = parseInt(parts[1], 10);
+    const day = parseInt(parts[2], 10);
+    if (!isNaN(month) && !isNaN(day)) {
+      const monthName = ETHIOPIC_MONTHS[month - 1] || 'መስከረም';
+      return `${monthName} ${day} ቀን ${year} ዓ.ም`;
+    }
+  }
+  return dateStr;
+}
+

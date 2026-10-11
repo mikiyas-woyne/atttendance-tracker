@@ -13,7 +13,7 @@ import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { Student, AttendanceSession, AttendanceRecord, AttendanceStatus } from '../types';
 import { EthiopianOrthodoxCross } from './EthiopianOrthodoxCross';
-import { toEthiopianDate } from '../lib/ethiopianDate';
+import { toEthiopianDate, ETHIOPIC_MONTHS, formatEthStringDate } from '../lib/ethiopianDate';
 import html2canvas from 'html2canvas';
 import {
   Users,
@@ -42,22 +42,6 @@ import {
   Filter,
   CheckSquare,
 } from 'lucide-react';
-
-const ETHIOPIC_MONTHS = [
-  'መስከረም',
-  'ጥቅምት',
-  'ኅዳር',
-  'ታኅሣሥ',
-  'ጥር',
-  'የካቲት',
-  'መጋቢት',
-  'ሚያዝያ',
-  'ግንቦት',
-  'ሰኔ',
-  'ሐምሌ',
-  'ነሐሴ',
-  'ጳጉሜን',
-];
 
 export const AdminDashboard: React.FC = () => {
   const { isAdmin, currentUser, logout } = useAuth();
@@ -105,8 +89,8 @@ export const AdminDashboard: React.FC = () => {
   // Reports State
   const [reportSubTab, setReportSubTab] = useState<'overall' | 'individual' | 'monthly' | 'ranking'>('overall');
   const [selectedReportStudentId, setSelectedReportStudentId] = useState<string>('');
-  const [selectedReportYear, setSelectedReportYear] = useState<number>(new Date().getFullYear());
-  const [selectedReportMonth, setSelectedReportMonth] = useState<number>(new Date().getMonth() + 1); // 1-12
+  const [selectedReportYear, setSelectedReportYear] = useState<number>(initialEthDate.year);
+  const [selectedReportMonth, setSelectedReportMonth] = useState<number>(initialEthDate.month);
   const [rankingMode, setRankingMode] = useState<'overall' | 'monthly'>('overall');
 
   // Refs for PNG Export
@@ -915,7 +899,7 @@ export const AdminDashboard: React.FC = () => {
               {/* Bottom Sticky Action Bar on Mobile */}
               <div className="sticky bottom-3 z-30 bg-white/95 backdrop-blur-xs p-3 rounded-2xl shadow-xl border border-amber-300/60 flex items-center justify-between gap-3">
                 <span className="text-[11px] sm:text-xs font-bold text-slate-700 truncate">
-                  የቀን {selectedMeetingDate} አቴንዳንስ፡
+                  የቀን {formatEthStringDate(selectedMeetingDate)} አቴንዳንስ፡
                 </span>
                 <button
                   onClick={handleSaveAttendance}
@@ -1014,7 +998,7 @@ export const AdminDashboard: React.FC = () => {
                         ፍሬ ሃይማኖት ሰንበት ትምህርት ቤት
                       </h3>
                       <p className="text-xs text-slate-600 font-medium">
-                        የአቴንዳንስ ሪፖርት — {new Date().toLocaleDateString('am-ET')}
+                        የአቴንዳንስ ሪፖርት — {toEthiopianDate(new Date()).formatted}
                       </p>
                     </div>
                   </div>
@@ -1154,7 +1138,7 @@ export const AdminDashboard: React.FC = () => {
                           ) : (
                             activeStudentRecords.map((r) => (
                               <div key={r.recordId} className="p-3 flex items-center justify-between">
-                                <span className="font-mono font-bold text-slate-800">{r.meetingDate}</span>
+                                <span className="font-bold text-slate-800">{formatEthStringDate(r.meetingDate)}</span>
                                 <div className="flex items-center gap-2">
                                   {r.excusedReason && (
                                     <span className="text-slate-500 italic font-normal">({r.excusedReason})</span>
@@ -1210,9 +1194,9 @@ export const AdminDashboard: React.FC = () => {
                           onChange={(e) => setSelectedReportYear(Number(e.target.value))}
                           className="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold font-mono"
                         >
-                          {[2025, 2026, 2027].map((y) => (
+                          {[2016, 2017, 2018, 2019, 2020, 2021, 2022].map((y) => (
                             <option key={y} value={y}>
-                              {y}
+                              {y} ዓ.ም
                             </option>
                           ))}
                         </select>

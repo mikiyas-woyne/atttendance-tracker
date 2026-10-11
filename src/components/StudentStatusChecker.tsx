@@ -3,6 +3,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Student, AttendanceRecord } from '../types';
 import { EthiopianOrthodoxCross } from './EthiopianOrthodoxCross';
+import { formatEthStringDate } from '../lib/ethiopianDate';
 import { Search, CheckCircle2, XCircle, Clock, Calendar, User, BookOpen, AlertCircle, Loader2, Award, RefreshCw, UserPlus } from 'lucide-react';
 
 interface StudentStatusCheckerProps {
@@ -298,8 +299,8 @@ export const StudentStatusChecker: React.FC<StudentStatusCheckerProps> = ({
                     className="p-4 flex items-center justify-between hover:bg-slate-50/80 transition-colors text-sm"
                   >
                     <div>
-                      <span className="font-mono font-bold text-slate-800">
-                        {rec.meetingDate}
+                      <span className="font-bold text-slate-800">
+                        {formatEthStringDate(rec.meetingDate)}
                       </span>
                       {rec.classId && (
                         <span className="ml-2 text-xs text-slate-500">({rec.classId})</span>
