@@ -1,10 +1,19 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { doc, getDocFromServer, getFirestore } from 'firebase/firestore';
+import { doc, getDocFromServer, initializeFirestore } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+
+// Use initializeFirestore with long-polling to prevent WebSocket/gRPC backend connection timeouts in iframe preview environments
+export const db = initializeFirestore(
+  app,
+  {
+    experimentalForceLongPolling: true,
+  },
+  firebaseConfig.firestoreDatabaseId
+);
+
 export const auth = getAuth(app);
 
 export enum OperationType {
@@ -49,9 +58,13 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 export async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.error('Please check your Firebase configuration or internet connection.');
+  } catch (error: any) {
+    if (
+      error?.message?.includes('offline') ||
+      error?.code === 'unavailable' ||
+      error?.message?.includes('10 seconds')
+    ) {
+      console.warn('Firestore connection warning (will operate with local cache / long-polling):', error.message);
     }
   }
 }

@@ -13,6 +13,7 @@ import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { Student, AttendanceSession, AttendanceRecord, AttendanceStatus } from '../types';
 import { EthiopianOrthodoxCross } from './EthiopianOrthodoxCross';
+import { toEthiopianDate } from '../lib/ethiopianDate';
 import html2canvas from 'html2canvas';
 import {
   Users,
@@ -55,6 +56,7 @@ const ETHIOPIC_MONTHS = [
   'ሰኔ',
   'ሐምሌ',
   'ነሐሴ',
+  'ጳጉሜን',
 ];
 
 export const AdminDashboard: React.FC = () => {
@@ -69,9 +71,13 @@ export const AdminDashboard: React.FC = () => {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Attendance Date (Defaults to Today YYYY-MM-DD)
-  const todayStr = new Date().toISOString().split('T')[0];
-  const [selectedMeetingDate, setSelectedMeetingDate] = useState<string>(todayStr);
+  // Attendance Date (Ethiopian Calendar)
+  const initialEthDate = toEthiopianDate(new Date());
+  const [ethDay, setEthDay] = useState<number>(initialEthDate.day);
+  const [ethMonth, setEthMonth] = useState<number>(initialEthDate.month);
+  const [ethYear, setEthYear] = useState<number>(initialEthDate.year);
+
+  const selectedMeetingDate = `${ethYear}-${String(ethMonth).padStart(2, '0')}-${String(ethDay).padStart(2, '0')}`;
 
   // Attendance Marking Map: studentId -> { status: AttendanceStatus, reason: string }
   const [markedMap, setMarkedMap] = useState<Record<string, { status?: AttendanceStatus; reason?: string }>>({});
@@ -524,194 +530,247 @@ export const AdminDashboard: React.FC = () => {
       )}
 
       {/* Main Admin Dashboard Container */}
-      <div className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden mb-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-4 sm:mb-6">
         
         {/* Organization Branding Banner */}
-        <div className="bg-gradient-to-r from-red-950 via-red-900 to-amber-950 p-6 text-white border-b-2 border-amber-500/40">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-amber-500/20 border-2 border-amber-400/50 flex items-center justify-center shrink-0">
-                <EthiopianOrthodoxCross className="w-8 h-8 text-amber-300" />
+        <div className="bg-gradient-to-r from-red-950 via-red-900 to-amber-950 p-3.5 sm:p-5 text-white border-b-2 border-amber-500/40">
+          <div className="flex flex-row items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-amber-500/20 border-2 border-amber-400/50 flex items-center justify-center shrink-0">
+                <EthiopianOrthodoxCross className="w-5 h-5 sm:w-7 sm:h-7 text-amber-300" />
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-amber-200 font-serif">
-                  ፍሬ ሃይማኖት ሰንበት ትምህርት ቤት
+              <div className="min-w-0">
+                <h2 className="text-base sm:text-xl font-bold text-amber-200 font-serif truncate">
+                  የአቴንዳንስ ማስተዳደሪያ ማዕከል
                 </h2>
-                <p className="text-xs sm:text-sm text-amber-100/80 font-medium">
-                  የተማሪዎች መዝገብ እና የአቴንዳንስ ማስተዳደሪያ ማዕከል
+                <p className="text-[11px] sm:text-xs text-amber-100/80 font-medium truncate">
+                  የተማሪዎች መዝገብ እና የመገኘት መከታተያ
                 </p>
               </div>
             </div>
 
             <button
               onClick={() => setShowManualAddModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-red-950 font-bold rounded-xl text-sm shadow transition-all self-start sm:self-auto border border-amber-400/60"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-500 hover:bg-amber-400 text-red-950 font-bold rounded-xl text-xs sm:text-sm shadow transition-all shrink-0 border border-amber-400/60"
             >
-              <PlusCircle className="w-4 h-4" />
-              <span>አዲስ ተማሪ በእጅ መዝግብ</span>
+              <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden xs:inline">+ አዲስ ተማሪ</span>
+              <span className="xs:hidden">+ አዲስ</span>
             </button>
           </div>
         </div>
 
         {/* 3 Main Tabs Navigation */}
-        <div className="flex border-b border-slate-200 bg-slate-50">
+        <div className="flex border-b border-slate-200 bg-slate-50 text-xs sm:text-sm">
           <button
             onClick={() => setActiveMainTab('attendance')}
-            className={`flex-1 py-4 px-3 text-center text-sm font-extrabold transition-all border-b-2 flex items-center justify-center gap-2 ${
+            className={`flex-1 py-3 px-2 text-center font-extrabold transition-all border-b-2 flex items-center justify-center gap-1.5 ${
               activeMainTab === 'attendance'
-                ? 'border-red-900 text-red-950 bg-white shadow-xs'
+                ? 'border-red-900 text-red-950 bg-white shadow-2xs'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <Users className="w-4.5 h-4.5 text-amber-800" />
-            <span>1. ተማሪዎች እና አቴንዳንስ</span>
+            <Users className="w-4 h-4 text-amber-800 shrink-0" />
+            <span className="hidden sm:inline">1. ተማሪዎች እና አቴንዳንስ</span>
+            <span className="sm:hidden font-bold">1. አቴንዳንስ</span>
           </button>
 
           <button
             onClick={() => setActiveMainTab('reports')}
-            className={`flex-1 py-4 px-3 text-center text-sm font-extrabold transition-all border-b-2 flex items-center justify-center gap-2 ${
+            className={`flex-1 py-3 px-2 text-center font-extrabold transition-all border-b-2 flex items-center justify-center gap-1.5 ${
               activeMainTab === 'reports'
-                ? 'border-red-900 text-red-950 bg-white shadow-xs'
+                ? 'border-red-900 text-red-950 bg-white shadow-2xs'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <FileSpreadsheet className="w-4.5 h-4.5 text-amber-800" />
-            <span>2. የአቴንዳንስ ሪፖርት</span>
+            <FileSpreadsheet className="w-4 h-4 text-amber-800 shrink-0" />
+            <span className="hidden sm:inline">2. የአቴንዳንስ ሪፖርት</span>
+            <span className="sm:hidden font-bold">2. ሪፖርት</span>
           </button>
 
           <button
             onClick={() => setActiveMainTab('settings')}
-            className={`flex-1 py-4 px-3 text-center text-sm font-extrabold transition-all border-b-2 flex items-center justify-center gap-2 ${
+            className={`flex-1 py-3 px-2 text-center font-extrabold transition-all border-b-2 flex items-center justify-center gap-1.5 ${
               activeMainTab === 'settings'
-                ? 'border-red-900 text-red-950 bg-white shadow-xs'
+                ? 'border-red-900 text-red-950 bg-white shadow-2xs'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <Settings className="w-4.5 h-4.5 text-amber-800" />
-            <span>3. ቅንብሮች</span>
+            <Settings className="w-4 h-4 text-amber-800 shrink-0" />
+            <span className="hidden sm:inline">3. ቅንብሮች</span>
+            <span className="sm:hidden font-bold">3. ቅንብሮች</span>
           </button>
         </div>
       </div>
 
       {loading ? (
-        <div className="bg-white rounded-2xl p-12 text-center shadow-md border border-slate-200">
-          <Loader2 className="w-10 h-10 animate-spin text-amber-600 mx-auto mb-3" />
-          <p className="text-slate-600 font-medium">የተማሪዎች እና የአቴንዳንስ መረጃ ከማዕከላዊ ዳታቤዝ እየተጫነ ነው...</p>
+        <div className="bg-white rounded-2xl p-8 sm:p-12 text-center shadow-sm border border-slate-200">
+          <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 animate-spin text-amber-600 mx-auto mb-3" />
+          <p className="text-slate-600 font-medium text-xs sm:text-sm">የተማሪዎች እና የአቴንዳንስ መረጃ እየተጫነ ነው...</p>
         </div>
       ) : (
         <>
           {/* TAB 1: STUDENTS & ATTENDANCE (ተማሪዎች እና አቴንዳንስ) */}
           {activeMainTab === 'attendance' && (
-            <div className="space-y-6 animate-fade-in">
+            <div className="space-y-3 sm:space-y-4 animate-fade-in">
               
-              {/* Date & Session Status Summary Banner */}
-              <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
+              {/* Date & Session Status Summary Toolbar */}
+              <div className="bg-white p-3 sm:p-4 rounded-2xl shadow-2xs border border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 
-                <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 mb-1">
-                      የአቴንዳንስ ቀን (Attendance Date)
-                    </label>
-                    <div className="relative">
-                      <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                      <input
-                        type="date"
-                        value={selectedMeetingDate}
-                        onChange={(e) => setSelectedMeetingDate(e.target.value)}
-                        className="pl-9 pr-3 py-2 rounded-xl border border-slate-300 font-mono text-sm text-slate-800 bg-white outline-none focus:ring-2 focus:ring-amber-500 font-bold"
-                      />
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <div className="flex flex-wrap items-center gap-1.5 bg-slate-50 p-1.5 sm:p-2 rounded-xl border border-slate-200">
+                    <div className="flex items-center gap-1 text-xs font-bold text-amber-950">
+                      <Calendar className="w-4 h-4 text-amber-700 shrink-0" />
+                      <span className="text-[11px] font-extrabold text-slate-600 hidden xs:inline">ቀን፡</span>
                     </div>
+
+                    {/* Day Dropdown */}
+                    <select
+                      value={ethDay}
+                      onChange={(e) => setEthDay(Number(e.target.value))}
+                      className="px-2 py-1 rounded-lg border border-slate-300 font-bold text-slate-900 text-xs bg-white outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+                    >
+                      {Array.from({ length: ethMonth === 13 ? 6 : 30 }, (_, i) => i + 1).map((d) => (
+                        <option key={d} value={d}>
+                          {d} ቀን
+                        </option>
+                      ))}
+                    </select>
+
+                    {/* Month Dropdown */}
+                    <select
+                      value={ethMonth}
+                      onChange={(e) => {
+                        const m = Number(e.target.value);
+                        setEthMonth(m);
+                        const maxD = m === 13 ? 6 : 30;
+                        if (ethDay > maxD) setEthDay(maxD);
+                      }}
+                      className="px-2 py-1 rounded-lg border border-slate-300 font-bold text-slate-900 text-xs bg-white outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+                    >
+                      {ETHIOPIC_MONTHS.map((mName, idx) => (
+                        <option key={mName} value={idx + 1}>
+                          {mName}
+                        </option>
+                      ))}
+                    </select>
+
+                    {/* Year Dropdown */}
+                    <select
+                      value={ethYear}
+                      onChange={(e) => setEthYear(Number(e.target.value))}
+                      className="px-2 py-1 rounded-lg border border-slate-300 font-mono font-bold text-slate-900 text-xs bg-white outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+                    >
+                      {[2016, 2017, 2018, 2019, 2020, 2021, 2022].map((y) => (
+                        <option key={y} value={y}>
+                          {y} ዓ.ም
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
-                  <div className="pt-5 sm:pt-0">
-                    {isDateAlreadyRecorded ? (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-700" />
-                        <span>የዚህ ቀን አቴንዳንስ ተመዝግቧል</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
-                        <Clock className="w-4 h-4 text-amber-800" />
-                        <span>የዚህ ቀን አቴንዳንስ አልተመዘገበም</span>
-                      </span>
-                    )}
+                  {isDateAlreadyRecorded ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] sm:text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
+                      <span>አቴንዳንስ ተመዝግቧል</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] sm:text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                      <Clock className="w-3.5 h-3.5 text-amber-800" />
+                      <span>አልተመዘገበም</span>
+                    </span>
+                  )}
+
+                  <div className="bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200 text-[11px] sm:text-xs text-slate-700 font-bold ml-auto sm:ml-0">
+                    ተማሪዎች፡ <span className="text-amber-950 font-mono font-extrabold">{students.length}</span>
                   </div>
                 </div>
 
-                {/* Total Counter & Action Buttons */}
-                <div className="flex flex-wrap items-center justify-end gap-2 w-full md:w-auto">
-                  <div className="bg-slate-100 px-3.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 font-bold">
-                    ጠቅላላ የተመዘገቡ ተማሪዎች፡ <span className="text-amber-900 font-mono text-sm">{students.length}</span>
-                  </div>
-
+                {/* Top Action Buttons */}
+                <div className="flex items-center justify-end gap-2">
                   <button
                     onClick={handleMarkAllPresent}
-                    className="px-3.5 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold text-xs border border-amber-300 shadow-xs transition-all flex items-center gap-1.5"
+                    className="flex-1 sm:flex-initial px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold text-xs border border-amber-300 transition-all flex items-center justify-center gap-1 min-h-[36px]"
                   >
-                    <CheckSquare className="w-4 h-4 text-emerald-700" />
+                    <CheckSquare className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
                     <span>ሁሉንም ተገኝቷል በል</span>
                   </button>
 
                   <button
                     onClick={handleSaveAttendance}
                     disabled={savingAttendance}
-                    className="px-5 py-2 rounded-xl bg-gradient-to-r from-red-950 to-amber-950 hover:from-red-900 hover:to-amber-900 text-amber-200 font-bold text-sm shadow-md transition-all flex items-center gap-2 border border-amber-400/40 disabled:opacity-50"
+                    className="flex-1 sm:flex-initial px-4 py-1.5 rounded-xl bg-gradient-to-r from-red-950 to-amber-950 hover:from-red-900 hover:to-amber-900 text-amber-200 font-bold text-xs sm:text-sm shadow-sm transition-all flex items-center justify-center gap-1.5 border border-amber-400/40 disabled:opacity-50 min-h-[36px]"
                   >
                     {savingAttendance ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
+                      <Loader2 className="w-4 h-4 animate-spin text-amber-300 shrink-0" />
                     ) : (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                     )}
-                    <span>አቴንዳንስ መዝግብ / አስቀምጥ</span>
+                    <span>አስቀምጥ</span>
                   </button>
                 </div>
 
               </div>
 
               {/* Search and Status Filter Controls */}
-              <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-3 items-center justify-between">
+              <div className="bg-white p-2.5 sm:p-3.5 rounded-2xl shadow-2xs border border-slate-200 flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
                 
                 {/* Search Field */}
-                <div className="relative w-full md:w-80">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <div className="relative flex-1 max-w-full sm:max-w-xs">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                   <input
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="ተማሪ በስም ወይም በመለያ ቁጥር ፈልግ..."
-                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 text-sm outline-none text-slate-800"
+                    placeholder="ተማሪ በስም ወይም መለያ ቁጥር ፈልግ..."
+                    className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 text-xs sm:text-sm outline-none text-slate-800"
                   />
                 </div>
 
-                {/* Filter Pills */}
-                <div className="flex flex-wrap items-center gap-1.5 text-xs w-full md:w-auto">
-                  <span className="font-bold text-slate-500 mr-1">ማጣሪያ፡</span>
-                  {(['all', 'unmarked', 'present', 'absent', 'excused'] as const).map((filterKey) => (
-                    <button
-                      key={filterKey}
-                      onClick={() => setAttendanceStatusFilter(filterKey)}
-                      className={`px-3 py-1.5 rounded-xl font-bold transition-all ${
-                        attendanceStatusFilter === filterKey
-                          ? 'bg-amber-500 text-red-950 shadow-xs font-extrabold'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                    >
-                      {filterKey === 'all' && 'ሁሉም'}
-                      {filterKey === 'unmarked' && 'ያልተመዘገበ'}
-                      {filterKey === 'present' && 'ተገኝቷል'}
-                      {filterKey === 'absent' && 'አልተገኘም'}
-                      {filterKey === 'excused' && 'በምክንያት'}
-                    </button>
-                  ))}
+                {/* Mobile Scrollable Filter Pills */}
+                <div className="flex items-center gap-1 overflow-x-auto pb-0.5 text-[11px] sm:text-xs no-scrollbar w-full sm:w-auto">
+                  {(['all', 'unmarked', 'present', 'absent', 'excused'] as const).map((filterKey) => {
+                    let count = 0;
+                    if (filterKey === 'all') count = activeStudents.length;
+                    else if (filterKey === 'unmarked') count = activeStudents.filter((s) => !markedMap[s.studentId]?.status).length;
+                    else if (filterKey === 'present') count = activeStudents.filter((s) => markedMap[s.studentId]?.status === 'present').length;
+                    else if (filterKey === 'absent') count = activeStudents.filter((s) => markedMap[s.studentId]?.status === 'absent').length;
+                    else if (filterKey === 'excused') count = activeStudents.filter((s) => markedMap[s.studentId]?.status === 'excused').length;
+
+                    return (
+                      <button
+                        key={filterKey}
+                        onClick={() => setAttendanceStatusFilter(filterKey)}
+                        className={`px-2.5 py-1 rounded-xl font-bold transition-all whitespace-nowrap shrink-0 flex items-center gap-1 ${
+                          attendanceStatusFilter === filterKey
+                            ? 'bg-amber-500 text-red-950 font-extrabold shadow-2xs'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        <span>
+                          {filterKey === 'all' && 'ሁሉም'}
+                          {filterKey === 'unmarked' && 'ያልተመዘገበ'}
+                          {filterKey === 'present' && 'ተገኝቷል'}
+                          {filterKey === 'absent' && 'አልተገኘም'}
+                          {filterKey === 'excused' && 'በምክንያት'}
+                        </span>
+                        <span className={`px-1 py-0.2 rounded-full text-[10px] ${
+                          attendanceStatusFilter === filterKey ? 'bg-red-950 text-amber-200' : 'bg-slate-200 text-slate-700'
+                        }`}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
 
               </div>
 
-              {/* Student Attendance List */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              {/* Student Attendance List (Mobile-First Compact Rows) */}
+              <div className="bg-white rounded-2xl shadow-2xs border border-slate-200 overflow-hidden">
                 <div className="divide-y divide-slate-100">
                   {filteredStudents.length === 0 ? (
-                    <div className="text-center py-10 text-slate-500">
+                    <div className="text-center py-8 text-slate-500 text-xs sm:text-sm">
                       ምንም የተማሪ መረጃ አልተገኘም።
                     </div>
                   ) : (
@@ -722,127 +781,130 @@ export const AdminDashboard: React.FC = () => {
                       return (
                         <div
                           key={student.studentId}
-                          className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50 transition-colors"
+                          className="p-2.5 sm:p-3.5 hover:bg-slate-50/80 transition-colors"
                         >
-                          {/* Student Profile Info */}
-                          <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-900 border border-amber-300 font-mono font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
-                              {student.studentId}
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-slate-900 text-base">
-                                  {student.fullName}
-                                </span>
-                                {student.status === 'inactive' && (
-                                  <span className="text-[10px] font-bold bg-slate-200 text-slate-600 px-2 py-0.5 rounded">
-                                    ያልተገለገለ
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            
+                            {/* Left: Student Name & Secondary Details (Single Name Display) */}
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <span className="px-1.5 py-0.5 rounded font-mono font-bold text-[11px] bg-amber-100 text-amber-950 border border-amber-300 shrink-0">
+                                {student.studentId}
+                              </span>
+
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-bold text-slate-900 text-xs sm:text-sm truncate">
+                                    {student.fullName}
                                   </span>
-                                )}
+                                  {student.status === 'inactive' && (
+                                    <span className="text-[9px] font-bold bg-slate-200 text-slate-600 px-1 py-0.2 rounded shrink-0">
+                                      ያልተገለገለ
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="text-[11px] text-slate-500 flex items-center gap-1.5 truncate mt-0.5">
+                                  <span>ዕድሜ፡ {student.age}</span>
+                                  {student.phoneNumber && <span>• {student.phoneNumber}</span>}
+                                  {!student.phoneNumber && student.guardianPhone && (
+                                    <span>• የወላጅ፡ {student.guardianPhone}</span>
+                                  )}
+                                </div>
                               </div>
-                              <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-3">
-                                <span>ዕድሜ፡ {student.age} ዓመት</span>
-                                {student.phoneNumber && <span>ስልክ፡ {student.phoneNumber}</span>}
-                                {student.guardianPhone && <span>የወላጅ ስልክ፡ {student.guardianPhone}</span>}
+                            </div>
+
+                            {/* Right: Attendance Toggle Group & Action Menu */}
+                            <div className="flex items-center justify-between sm:justify-end gap-1.5 shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                              
+                              {/* 3 Status Buttons */}
+                              <div className="flex items-center gap-1 bg-slate-100/90 p-1 rounded-xl border border-slate-200">
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetStudentStatus(student.studentId, 'present')}
+                                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 min-h-[32px] ${
+                                    currentStatus === 'present'
+                                      ? 'bg-emerald-600 text-white shadow-2xs'
+                                      : 'text-slate-700 hover:text-emerald-700 hover:bg-emerald-50'
+                                  }`}
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                                  <span>ተገኝቷል</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetStudentStatus(student.studentId, 'absent')}
+                                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 min-h-[32px] ${
+                                    currentStatus === 'absent'
+                                      ? 'bg-red-600 text-white shadow-2xs'
+                                      : 'text-slate-700 hover:text-red-700 hover:bg-red-50'
+                                  }`}
+                                >
+                                  <XCircle className="w-3.5 h-3.5 shrink-0" />
+                                  <span>አልተገኘም</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetStudentStatus(student.studentId, 'excused')}
+                                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 min-h-[32px] ${
+                                    currentStatus === 'excused'
+                                      ? 'bg-amber-600 text-white shadow-2xs'
+                                      : 'text-slate-700 hover:text-amber-700 hover:bg-amber-50'
+                                  }`}
+                                >
+                                  <Clock className="w-3.5 h-3.5 shrink-0" />
+                                  <span>በምክንያት</span>
+                                </button>
                               </div>
+
+                              {/* Row Action Icons */}
+                              <div className="flex items-center gap-0.5 border-l border-slate-200 pl-1">
+                                <button
+                                  onClick={() => setSelectedStudentForHistory(student)}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-amber-900 hover:bg-amber-50 transition-colors"
+                                  title="የመገኘት ታሪክ"
+                                >
+                                  <History className="w-3.5 h-3.5" />
+                                </button>
+
+                                <button
+                                  onClick={() => setEditingStudent(student)}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-amber-900 hover:bg-amber-50 transition-colors"
+                                  title="መረጃ አስተካክል"
+                                >
+                                  <Edit className="w-3.5 h-3.5" />
+                                </button>
+
+                                <button
+                                  onClick={() => handleToggleStudentStatus(student)}
+                                  className={`p-1.5 rounded-lg transition-colors ${
+                                    student.status === 'active'
+                                      ? 'text-slate-400 hover:text-red-600 hover:bg-red-50'
+                                      : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50'
+                                  }`}
+                                  title={student.status === 'active' ? 'አቦዝን' : 'አንቀሳቅስ'}
+                                >
+                                  {student.status === 'active' ? <X className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
+                                </button>
+                              </div>
+
                             </div>
                           </div>
 
-                          {/* Attendance Controls */}
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                            
-                            {/* 3 Clear Amharic Buttons */}
-                            <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
-                              <button
-                                type="button"
-                                onClick={() => handleSetStudentStatus(student.studentId, 'present')}
-                                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
-                                  currentStatus === 'present'
-                                    ? 'bg-emerald-600 text-white shadow-sm'
-                                    : 'text-slate-700 hover:text-emerald-700 hover:bg-emerald-50'
-                                }`}
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                <span>ተገኝቷል</span>
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => handleSetStudentStatus(student.studentId, 'absent')}
-                                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
-                                  currentStatus === 'absent'
-                                    ? 'bg-red-600 text-white shadow-sm'
-                                    : 'text-slate-700 hover:text-red-700 hover:bg-red-50'
-                                }`}
-                              >
-                                <XCircle className="w-3.5 h-3.5" />
-                                <span>አልተገኘም</span>
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => handleSetStudentStatus(student.studentId, 'excused')}
-                                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
-                                  currentStatus === 'excused'
-                                    ? 'bg-amber-600 text-white shadow-sm'
-                                    : 'text-slate-700 hover:text-amber-700 hover:bg-amber-50'
-                                }`}
-                              >
-                                <Clock className="w-3.5 h-3.5" />
-                                <span>በምክንያት</span>
-                              </button>
-                            </div>
-
-                            {/* Unmarked Status Indicator */}
-                            {!currentStatus && (
-                              <span className="text-xs text-slate-400 font-semibold px-2 py-1 rounded bg-slate-100 border border-slate-200">
-                                ያልተመዘገበ
-                              </span>
-                            )}
-
-                            {/* Optional Reason Input when "በምክንያት" is selected */}
-                            {currentStatus === 'excused' && (
+                          {/* Optional Reason Input when "በምክንያት" is selected */}
+                          {currentStatus === 'excused' && (
+                            <div className="mt-1.5 pt-1 border-t border-amber-200/50">
                               <input
                                 type="text"
                                 value={statusEntry.reason || ''}
                                 onChange={(e) => handleSetExcusedReason(student.studentId, e.target.value)}
-                                placeholder="ምክንያት (የታመመ፣ ወዘተ...)"
-                                className="px-3 py-1.5 rounded-xl border border-amber-300 text-xs text-slate-800 bg-amber-50/60 focus:bg-white outline-none w-full sm:w-48"
+                                placeholder="የመቅረት ምክንያት ያስገቡ (ለምሳሌ፡ የታመመ፣ የቤተሰብ ጉዳይ)..."
+                                className="px-2.5 py-1 rounded-lg border border-amber-300 text-xs text-slate-800 bg-amber-50/70 focus:bg-white outline-none w-full sm:max-w-md"
                               />
-                            )}
-
-                            {/* Individual Student Action Controls */}
-                            <div className="flex items-center gap-1 border-l border-slate-200 pl-2">
-                              <button
-                                onClick={() => setSelectedStudentForHistory(student)}
-                                className="p-1.5 rounded-lg text-slate-500 hover:text-amber-900 hover:bg-amber-50 transition-colors"
-                                title="የመገኘት ታሪክ"
-                              >
-                                <History className="w-4 h-4" />
-                              </button>
-
-                              <button
-                                onClick={() => setEditingStudent(student)}
-                                className="p-1.5 rounded-lg text-slate-500 hover:text-amber-900 hover:bg-amber-50 transition-colors"
-                                title="መረጃ አስተካክል"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </button>
-
-                              <button
-                                onClick={() => handleToggleStudentStatus(student)}
-                                className={`p-1.5 rounded-lg transition-colors ${
-                                  student.status === 'active'
-                                    ? 'text-red-600 hover:bg-red-50'
-                                    : 'text-emerald-600 hover:bg-emerald-50'
-                                }`}
-                                title={student.status === 'active' ? 'አቦዝን' : 'አንቀሳቅስ'}
-                              >
-                                {student.status === 'active' ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />}
-                              </button>
                             </div>
+                          )}
 
-                          </div>
                         </div>
                       );
                     })
@@ -850,22 +912,22 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* Bottom Floating Save Button */}
-              <div className="bg-white p-4 rounded-2xl shadow-lg border border-slate-200 flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-600">
-                  የቀን {selectedMeetingDate} አቴንዳንስ መዝገብን ለማስቀመጥ ይጫኑ።
+              {/* Bottom Sticky Action Bar on Mobile */}
+              <div className="sticky bottom-3 z-30 bg-white/95 backdrop-blur-xs p-3 rounded-2xl shadow-xl border border-amber-300/60 flex items-center justify-between gap-3">
+                <span className="text-[11px] sm:text-xs font-bold text-slate-700 truncate">
+                  የቀን {selectedMeetingDate} አቴንዳንስ፡
                 </span>
                 <button
                   onClick={handleSaveAttendance}
                   disabled={savingAttendance}
-                  className="px-6 py-2.5 rounded-xl bg-red-950 hover:bg-red-900 text-amber-200 font-bold text-sm shadow transition-all flex items-center gap-2 border border-amber-400/40 disabled:opacity-50"
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-red-950 to-amber-950 hover:from-red-900 hover:to-amber-900 text-amber-200 font-extrabold text-xs sm:text-sm shadow-md transition-all flex items-center gap-2 border border-amber-400/40 disabled:opacity-50 shrink-0"
                 >
                   {savingAttendance ? (
                     <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
                   ) : (
                     <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                   )}
-                  <span>አቴንዳንስ መዝግብ / አስቀምጥ</span>
+                  <span>አቴንዳንስ አስቀምጥ</span>
                 </button>
               </div>
 
