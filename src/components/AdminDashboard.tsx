@@ -361,6 +361,7 @@ export const AdminDashboard: React.FC = () => {
         fullName: manualName.trim(),
         age: parseInt(manualAge, 10),
         gender: manualGender,
+        classId: 'ዓቢይ ክፍል (የአዋቂዎች)',
         phoneNumber: manualPhone.trim() || '',
         guardianPhone: manualGuardian.trim() || '',
         registrationDate: new Date().toLocaleDateString('am-ET'),

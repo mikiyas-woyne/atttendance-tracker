@@ -5,14 +5,7 @@ import { Student } from '../types';
 import { EthiopianOrthodoxCross } from './EthiopianOrthodoxCross';
 import { CheckCircle2, AlertCircle, Loader2, UserPlus, ShieldAlert, Copy, Check, ArrowRight } from 'lucide-react';
 
-const CLASS_OPTIONS = [
-  'ሕፃናት (ከ4-8 ዓመት)',
-  'መካከለኛ (ከ9-13 ዓመት)',
-  'ወጣቶች (ከ14-18 ዓመት)',
-  'ዓቢይ ክፍል (ከ19 ዓመት በላይ)',
-  'ቅዱስ ዮሐንስ ክፍል',
-  'ቅዱስ ዳዊት ክፍል',
-];
+const ADULTS_CLASS_NAME = 'ዓቢይ ክፍል (የአዋቂዎች)';
 
 interface StudentRegistrationFormProps {
   onViewStatus?: (studentId: string) => void;
@@ -25,7 +18,6 @@ export const StudentRegistrationForm: React.FC<StudentRegistrationFormProps> = (
   const [gender, setGender] = useState<'ወንድ' | 'ሴት' | 'ያልተጠቀሰ'>('ወንድ');
   const [phoneNumber, setPhoneNumber] = useState<string>('');
   const [guardianPhone, setGuardianPhone] = useState<string>('');
-  const [classId, setClassId] = useState<string>('ሕፃናት (ከ4-8 ዓመት)');
 
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -42,7 +34,6 @@ export const StudentRegistrationForm: React.FC<StudentRegistrationFormProps> = (
       snap.forEach((docSnap) => {
         const data = docSnap.data();
         if (data.studentId && typeof data.studentId === 'string') {
-          // Match digits at the end of student ID (e.g. FH-0001 or FH-2026-0005)
           const matches = data.studentId.match(/(\d+)$/);
           if (matches && matches[1]) {
             const num = parseInt(matches[1], 10);
@@ -83,7 +74,6 @@ export const StudentRegistrationForm: React.FC<StudentRegistrationFormProps> = (
     setLoading(true);
 
     try {
-      // Check potential duplicates by full name & phone
       if (phoneNumber.trim() || guardianPhone.trim()) {
         const phoneToMatch = phoneNumber.trim() || guardianPhone.trim();
         const dupQuery = query(
@@ -107,7 +97,6 @@ export const StudentRegistrationForm: React.FC<StudentRegistrationFormProps> = (
         }
       }
 
-      // Compute sequential ID starting from 0001
       const assignedId = await generateSequentialStudentId();
       const now = new Date().toISOString();
 
@@ -118,7 +107,7 @@ export const StudentRegistrationForm: React.FC<StudentRegistrationFormProps> = (
         gender,
         phoneNumber: phoneNumber.trim() || '',
         guardianPhone: guardianPhone.trim() || '',
-        classId,
+        classId: ADULTS_CLASS_NAME,
         registrationDate: new Date().toLocaleDateString('am-ET'),
         status: 'active',
         createdAt: now,
@@ -127,7 +116,6 @@ export const StudentRegistrationForm: React.FC<StudentRegistrationFormProps> = (
 
       await addDoc(collection(db, 'students'), newStudentData);
 
-      // Save Student ID on this device so opening the site always loads their attendance
       localStorage.setItem('my_student_id', assignedId);
 
       setRegisteredStudent(newStudentData);
@@ -158,7 +146,6 @@ export const StudentRegistrationForm: React.FC<StudentRegistrationFormProps> = (
     setGender('ወንድ');
     setPhoneNumber('');
     setGuardianPhone('');
-    setClassId(CLASS_OPTIONS[0]);
     setErrorMessage(null);
     setDuplicateWarning(false);
     setShowForm(false);
@@ -247,12 +234,8 @@ export const StudentRegistrationForm: React.FC<StudentRegistrationFormProps> = (
           </h2>
           
           <p className="text-slate-700 text-base sm:text-lg max-w-xl mx-auto mb-6 leading-relaxed">
-            በኦርቶዶክሳዊት ተዋሕዶ ቤተ ክርስቲያን እምነትና ሥርዓት ልጆቻችሁን ለማስተማር እና የመገኘት መዝገብ ለመከታተል አሁኑኑ ይመዝገቡ።
+            በኦርቶዶክሳዊት ተዋሕዶ ቤተ ክርስቲያን እምነትና ሥርዓት ለመማር እና የመገኘት መዝገብ ለመከታተል አሁኑኑ ይመዝገቡ።
           </p>
-
-          <div className="bg-amber-100/80 border border-amber-300 rounded-xl p-4 mb-8 max-w-lg mx-auto text-amber-900 text-sm font-serif italic shadow-sm">
-            «ህፃናትን ወደ እኔ ይመጡ ዘንድ ተዋቸው፤ አትከልክሏቸው፤ የእግዚአብሔር መንግሥት እንደ እነዚህ ላሉት ናትና።» (ማር 10:14)
-          </div>
 
           <button
             onClick={() => setShowForm(true)}
@@ -326,7 +309,7 @@ export const StudentRegistrationForm: React.FC<StudentRegistrationFormProps> = (
                   required
                   value={age}
                   onChange={(e) => setAge(e.target.value)}
-                  placeholder="ለምሳሌ፡ 10"
+                  placeholder="ለምሳሌ፡ 25"
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-slate-800 text-sm outline-none transition-all"
                 />
               </div>
@@ -347,29 +330,11 @@ export const StudentRegistrationForm: React.FC<StudentRegistrationFormProps> = (
               </div>
             </div>
 
-            {/* 3. Class / Group */}
-            <div>
-              <label className="block text-sm font-bold text-slate-800 mb-1">
-                4. የትምህርት ክፍል/ቡድን
-              </label>
-              <select
-                value={classId}
-                onChange={(e) => setClassId(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-slate-800 text-sm outline-none bg-white transition-all"
-              >
-                {CLASS_OPTIONS.map((cls) => (
-                  <option key={cls} value={cls}>
-                    {cls}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* 4. Student Phone & Guardian Phone Grid */}
+            {/* 3. Student Phone & Additional Contact Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-bold text-slate-800 mb-1">
-                  5. ስልክ ቁጥር (አማራጭ)
+                  4. ስልክ ቁጥር (አማራጭ)
                 </label>
                 <input
                   type="tel"
@@ -382,7 +347,7 @@ export const StudentRegistrationForm: React.FC<StudentRegistrationFormProps> = (
 
               <div>
                 <label className="block text-sm font-bold text-slate-800 mb-1">
-                  6. የወላጅ/አላፊ ስልክ ቁጥር (አማራጭ)
+                  5. ተጨማሪ አድራሻ / ስልክ (አማራጭ)
                 </label>
                 <input
                   type="tel"
