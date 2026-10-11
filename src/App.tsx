@@ -2,21 +2,28 @@ import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Header } from './components/Header';
 import { StudentRegistrationForm } from './components/StudentRegistrationForm';
+import { StudentStatusChecker } from './components/StudentStatusChecker';
 import { AdminDashboard } from './components/AdminDashboard';
 import { AdminLoginModal } from './components/AdminLoginModal';
 import { Footer } from './components/Footer';
 
 const AppContent: React.FC = () => {
   const { isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<'register' | 'admin'>('register');
+  const [activeTab, setActiveTab] = useState<'register' | 'status' | 'admin'>('register');
+  const [statusStudentId, setStatusStudentId] = useState<string>('');
   const [isAdminModalOpen, setIsAdminModalOpen] = useState<boolean>(false);
 
-  const handleSelectTab = (tab: 'register' | 'admin') => {
+  const handleSelectTab = (tab: 'register' | 'status' | 'admin') => {
     if (tab === 'admin' && !isAdmin) {
       setIsAdminModalOpen(true);
     } else {
       setActiveTab(tab);
     }
+  };
+
+  const handleViewStatus = (studentId: string) => {
+    setStatusStudentId(studentId);
+    setActiveTab('status');
   };
 
   return (
@@ -29,7 +36,12 @@ const AppContent: React.FC = () => {
 
       <main className="flex-1 py-4">
         {activeTab === 'register' ? (
-          <StudentRegistrationForm />
+          <StudentRegistrationForm onViewStatus={handleViewStatus} />
+        ) : activeTab === 'status' ? (
+          <StudentStatusChecker
+            initialStudentId={statusStudentId}
+            onGoToRegister={() => setActiveTab('register')}
+          />
         ) : isAdmin ? (
           <AdminDashboard />
         ) : (

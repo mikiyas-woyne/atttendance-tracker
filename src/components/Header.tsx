@@ -1,15 +1,15 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { UserCheck, LogIn, LogOut, ShieldCheck, UserPlus } from 'lucide-react';
+import { UserCheck, LogIn, LogOut, ShieldCheck, UserPlus, Search } from 'lucide-react';
 
 interface HeaderProps {
-  activeTab: 'register' | 'admin';
-  setActiveTab: (tab: 'register' | 'admin') => void;
+  activeTab: 'register' | 'status' | 'admin';
+  setActiveTab: (tab: 'register' | 'status' | 'admin') => void;
   onOpenAdminModal: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenAdminModal }) => {
-  const { currentUser, isAdmin, logout } = useAuth();
+  const { isAdmin, logout } = useAuth();
 
   return (
     <header className="bg-gradient-to-r from-red-950 via-red-900 to-amber-950 text-white shadow-xl border-b-2 border-amber-500/40 sticky top-0 z-40">
@@ -36,12 +36,12 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenA
           </div>
 
           {/* Navigation Controls */}
-          <div className="flex items-center justify-between md:justify-end gap-2 pt-1 md:pt-0 border-t border-amber-800/50 md:border-t-0">
+          <div className="flex flex-wrap items-center justify-between md:justify-end gap-2 pt-1 md:pt-0 border-t border-amber-800/50 md:border-t-0">
             <button
               onClick={() => setActiveTab('register')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-sm ${
                 activeTab === 'register'
-                  ? 'bg-amber-500 text-red-950 shadow-amber-500/20'
+                  ? 'bg-amber-500 text-red-950 shadow-amber-500/20 font-bold'
                   : 'bg-red-900/60 text-amber-100 hover:bg-red-800/80 border border-amber-500/30'
               }`}
             >
@@ -49,13 +49,25 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenA
               <span>ተመዝገብ</span>
             </button>
 
+            <button
+              onClick={() => setActiveTab('status')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-sm ${
+                activeTab === 'status'
+                  ? 'bg-amber-500 text-red-950 shadow-amber-500/20 font-bold'
+                  : 'bg-red-900/60 text-amber-100 hover:bg-red-800/80 border border-amber-500/30'
+              }`}
+            >
+              <Search className="w-4 h-4" />
+              <span>የመገኘት ሁኔታ</span>
+            </button>
+
             {isAdmin ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => setActiveTab('admin')}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-sm ${
                     activeTab === 'admin'
-                      ? 'bg-amber-500 text-red-950 shadow-amber-500/20'
+                      ? 'bg-amber-500 text-red-950 shadow-amber-500/20 font-bold'
                       : 'bg-red-900/60 text-amber-100 hover:bg-red-800/80 border border-amber-500/30'
                   }`}
                 >
@@ -66,7 +78,7 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenA
                 <button
                   onClick={logout}
                   title="ከአካውንት ውጣ"
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-900/40 text-red-200 hover:bg-red-800/60 border border-red-700/50 transition-colors"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-red-900/40 text-red-200 hover:bg-red-800/60 border border-red-700/50 transition-colors"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">ውጣ</span>
@@ -75,7 +87,7 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenA
             ) : (
               <button
                 onClick={onOpenAdminModal}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-sm font-semibold bg-amber-600/90 hover:bg-amber-500 text-white transition-all shadow-md border border-amber-400/40"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold bg-amber-600/90 hover:bg-amber-500 text-white transition-all shadow-md border border-amber-400/40"
               >
                 <LogIn className="w-4 h-4" />
                 <span>የአስተዳዳሪ መግቢያ</span>

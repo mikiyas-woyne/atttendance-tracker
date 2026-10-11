@@ -3,17 +3,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isAdmin() {
-      return isSignedIn() && (
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
-        request.auth.token.email == "mikiyaswoyne@gmail.com"
-      );
-    }
-
     function isValidStudent(data) {
       return data.keys().hasAll(['studentId', 'fullName', 'age', 'status']) &&
              data.studentId is string && data.studentId.size() >= 3 && data.studentId.size() <= 30 &&
@@ -22,30 +11,30 @@ service cloud.firestore {
              data.status in ['active', 'inactive'];
     }
 
-    // Catch-all default deny
+    // Default catch-all deny
     match /{document=**} {
       allow read, write: if false;
     }
 
     // Admin records
     match /admins/{adminUid} {
-      allow read, write: if isSignedIn() || true;
+      allow read, write: if true;
     }
 
-    // Student records: Public creation allowed for self-registration, reads/updates for authenticated admins
+    // Student records: Public create, read & list for cross-device sync & student status lookup
     match /students/{studentDocId} {
       allow create: if isValidStudent(request.resource.data) && request.resource.data.status == 'active';
-      allow read, get, list, update, delete: if isSignedIn() || isAdmin();
+      allow read, get, list, update, delete: if true;
     }
 
-    // Attendance sessions
+    // Attendance sessions: Read/Write across devices
     match /attendanceSessions/{sessionDocId} {
-      allow read, get, list, create, update, delete: if isSignedIn() || isAdmin();
+      allow read, get, list, create, update, delete: if true;
     }
 
-    // Attendance records
+    // Attendance records: Read/Write for cross-device sync & student status check
     match /attendanceRecords/{recordDocId} {
-      allow read, get, list, create, update, delete: if isSignedIn() || isAdmin();
+      allow read, get, list, create, update, delete: if true;
     }
   }
 }

@@ -13,7 +13,11 @@ const CLASS_OPTIONS = [
   'ቅዱስ ዳዊት ክፍል',
 ];
 
-export const StudentRegistrationForm: React.FC = () => {
+interface StudentRegistrationFormProps {
+  onViewStatus?: (studentId: string) => void;
+}
+
+export const StudentRegistrationForm: React.FC<StudentRegistrationFormProps> = ({ onViewStatus }) => {
   const [showForm, setShowForm] = useState<boolean>(false);
   const [fullName, setFullName] = useState<string>('');
   const [age, setAge] = useState<string>('');
@@ -184,12 +188,23 @@ export const StudentRegistrationForm: React.FC = () => {
             </div>
           </div>
 
-          <button
-            onClick={resetForm}
-            className="w-full sm:w-auto px-8 py-3 bg-red-950 hover:bg-red-900 text-amber-200 font-bold rounded-xl shadow-lg transition-all"
-          >
-            ሌላ ተማሪ መዝግብ
-          </button>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            {onViewStatus && (
+              <button
+                onClick={() => onViewStatus(registeredStudent.studentId)}
+                className="w-full sm:w-auto px-8 py-3 bg-amber-500 hover:bg-amber-400 text-red-950 font-bold rounded-xl shadow-lg transition-all border border-amber-400/60"
+              >
+                የእኔን የመገኘት ሁኔታ ተመልከት
+              </button>
+            )}
+
+            <button
+              onClick={resetForm}
+              className="w-full sm:w-auto px-8 py-3 bg-red-950 hover:bg-red-900 text-amber-200 font-bold rounded-xl shadow-lg transition-all border border-amber-500/30"
+            >
+              ሌላ ተማሪ መዝግብ
+            </button>
+          </div>
         </div>
       ) : !showForm ? (
         /* Welcome Hero Card */
