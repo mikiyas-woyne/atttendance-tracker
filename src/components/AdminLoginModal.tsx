@@ -12,8 +12,8 @@ interface AdminLoginModalProps {
 export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const { loginWithEmail, loginWithGoogle } = useAuth();
 
-  const [username, setUsername] = useState<string>('superadmin');
-  const [password, setPassword] = useState<string>('admin@123');
+  const [username, setUsername] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -38,28 +38,12 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
       setLoading(false);
       console.warn('Admin Auth info:', err?.message || err);
       if (err.code === 'auth/wrong-password') {
-        setErrorMsg('የተሳሳተ የይለፍ ቃል ያስገቡ። እባክዎን «admin@123» ወይም የተመዘገበ የይለፍ ቃልዎን ድጋሚ ይሞክሩ።');
+        setErrorMsg('የተሳሳተ የይለፍ ቃል ያስገቡ። እባክዎን ድጋሚ ይሞክሩ።');
       } else if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
         setErrorMsg('የተሳሳተ የተጠቃሚ ስም ወይም የይለፍ ቃል ያስገቡ።');
       } else {
         setErrorMsg(err.message || 'የመግቢያ ስህተት ተከሰተ። እባክዎን ድጋሚ ይሞክሩ።');
       }
-    }
-  };
-
-  const handleQuickSuperadminLogin = async () => {
-    setUsername('superadmin');
-    setPassword('admin@123');
-    setErrorMsg(null);
-    setLoading(true);
-    try {
-      await loginWithEmail('superadmin', 'admin@123');
-      setLoading(false);
-      onSuccess();
-    } catch (err: any) {
-      setLoading(false);
-      console.warn('Superadmin login info:', err);
-      setErrorMsg('በSuperadmin መግባት አልተቻለም።');
     }
   };
 
@@ -73,7 +57,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
     } catch (err: any) {
       setLoading(false);
       console.warn('Google login info:', err);
-      setErrorMsg('በGoogle መግባት አልተቻለም። እባክዎን በSuperadmin መግቢያ ይሞክሩ።');
+      setErrorMsg('በGoogle መግባት አልተቻለም።');
     }
   };
 
@@ -111,27 +95,6 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
             </div>
           )}
 
-          {/* Preset Credentials Banner */}
-          <div className="bg-amber-50 border border-amber-300 rounded-xl p-3.5 text-xs text-amber-950 space-y-1.5 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="font-bold flex items-center gap-1.5 text-amber-900">
-                <ShieldCheck className="w-4 h-4 text-amber-700" />
-                የአስተዳዳሪ መግቢያ መረጃ (Credentials)
-              </span>
-              <button
-                type="button"
-                onClick={handleQuickSuperadminLogin}
-                className="px-2.5 py-1 bg-amber-200 hover:bg-amber-300 font-extrabold text-[11px] rounded-lg text-amber-950 transition-colors"
-              >
-                አሁን ግባ
-              </button>
-            </div>
-            <div className="font-mono text-slate-700 space-y-0.5 pt-1">
-              <div><span className="font-semibold text-slate-500">የተጠቃሚ ስም (Username):</span> <span className="font-bold text-slate-900">superadmin</span></div>
-              <div><span className="font-semibold text-slate-500">የይለፍ ቃል (Password):</span> <span className="font-bold text-slate-900">admin@123</span></div>
-            </div>
-          </div>
-
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-3.5">
             <div>
@@ -145,7 +108,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="superadmin"
+                  placeholder="የተጠቃሚ ስም ያስገቡ..."
                   className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 text-sm text-slate-800 font-medium outline-none"
                 />
               </div>
@@ -162,7 +125,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="admin@123"
+                  placeholder="የይለፍ ቃል ያስገቡ..."
                   className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 text-sm text-slate-800 font-mono outline-none"
                 />
               </div>
