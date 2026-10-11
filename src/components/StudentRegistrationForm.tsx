@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { Student } from '../types';
-import { CheckCircle2, AlertCircle, Loader2, UserPlus, Sparkles, ShieldAlert, Copy, Check } from 'lucide-react';
+import { EthiopianOrthodoxCross } from './EthiopianOrthodoxCross';
+import { CheckCircle2, AlertCircle, Loader2, UserPlus, ShieldAlert, Copy, Check, ArrowRight } from 'lucide-react';
 
 const CLASS_OPTIONS = [
   'ሕፃናት (ከ4-8 ዓመት)',
@@ -32,10 +33,34 @@ export const StudentRegistrationForm: React.FC<StudentRegistrationFormProps> = (
   const [registeredStudent, setRegisteredStudent] = useState<Student | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
 
-  const generateStudentId = () => {
-    const year = new Date().getFullYear();
-    const randomDigits = Math.floor(1000 + Math.random() * 9000);
-    return `FH-${year}-${randomDigits}`;
+  // Generate Sequential ID starting from 0001 (e.g. FH-0001, FH-0002...)
+  const generateSequentialStudentId = async (): Promise<string> => {
+    try {
+      const snap = await getDocs(collection(db, 'students'));
+      let maxNumber = 0;
+
+      snap.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.studentId && typeof data.studentId === 'string') {
+          // Match digits at the end of student ID (e.g. FH-0001 or FH-2026-0005)
+          const matches = data.studentId.match(/(\d+)$/);
+          if (matches && matches[1]) {
+            const num = parseInt(matches[1], 10);
+            if (!isNaN(num) && num > maxNumber) {
+              maxNumber = num;
+            }
+          }
+        }
+      });
+
+      const nextNum = maxNumber + 1;
+      const formattedNum = String(nextNum).padStart(4, '0');
+      return `FH-${formattedNum}`;
+    } catch (e) {
+      console.warn('Error computing sequential ID, using fallback:', e);
+      const random = Math.floor(1 + Math.random() * 9999);
+      return `FH-${String(random).padStart(4, '0')}`;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -43,7 +68,6 @@ export const StudentRegistrationForm: React.FC<StudentRegistrationFormProps> = (
     setErrorMessage(null);
     setDuplicateWarning(false);
 
-    // Validation
     const trimmedName = fullName.trim();
     if (!trimmedName || trimmedName.length < 2) {
       setErrorMessage('እባክዎን ትክክለኛ ሙሉ ስም ያስገቡ።');
@@ -83,7 +107,8 @@ export const StudentRegistrationForm: React.FC<StudentRegistrationFormProps> = (
         }
       }
 
-      const assignedId = generateStudentId();
+      // Compute sequential ID starting from 0001
+      const assignedId = await generateSequentialStudentId();
       const now = new Date().toISOString();
 
       const newStudentData: Student = {
@@ -101,6 +126,9 @@ export const StudentRegistrationForm: React.FC<StudentRegistrationFormProps> = (
       };
 
       await addDoc(collection(db, 'students'), newStudentData);
+
+      // Save Student ID on this device so opening the site always loads their attendance
+      localStorage.setItem('my_student_id', assignedId);
 
       setRegisteredStudent(newStudentData);
       setLoading(false);
@@ -138,14 +166,14 @@ export const StudentRegistrationForm: React.FC<StudentRegistrationFormProps> = (
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      {/* Success Modal / View */}
+      {/* Success View */}
       {registeredStudent ? (
         <div className="bg-white rounded-2xl shadow-xl border-2 border-emerald-500/30 overflow-hidden text-center p-6 sm:p-8 animate-fade-in">
           <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 mx-auto mb-4 shadow-inner">
             <CheckCircle2 className="w-10 h-10" />
           </div>
 
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">
+          <h2 className="text-2xl font-bold text-slate-800 mb-2 font-serif">
             ምዝገባዎ በተሳካ ሁኔታ ተጠናቋል!
           </h2>
           <p className="text-slate-600 mb-6">
@@ -168,8 +196,8 @@ export const StudentRegistrationForm: React.FC<StudentRegistrationFormProps> = (
                 {copied ? <Check className="w-5 h-5 text-emerald-700" /> : <Copy className="w-5 h-5" />}
               </button>
             </div>
-            <p className="text-xs text-amber-700/90 mt-2">
-              * ይህንን መለያ ቁጥር ለወደፊት የመገኘት መዝገብ ምልክት አዘጋጅተው ይያዙት።
+            <p className="text-xs text-amber-800/90 mt-2">
+              * ይህ መለያ ቁጥር በዚህ ስልክዎ ላይ ተቀምጧል። ድጋሚ ድረ-ገጹን ሲከፍቱ ቀጥታ የመገኘት ሁኔታዎ ይታያል።
             </p>
           </div>
 
@@ -192,15 +220,16 @@ export const StudentRegistrationForm: React.FC<StudentRegistrationFormProps> = (
             {onViewStatus && (
               <button
                 onClick={() => onViewStatus(registeredStudent.studentId)}
-                className="w-full sm:w-auto px-8 py-3 bg-amber-500 hover:bg-amber-400 text-red-950 font-bold rounded-xl shadow-lg transition-all border border-amber-400/60"
+                className="w-full sm:w-auto px-8 py-3.5 bg-amber-500 hover:bg-amber-400 text-red-950 font-extrabold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 border border-amber-400/60"
               >
-                የእኔን የመገኘት ሁኔታ ተመልከት
+                <span>የእኔን የመገኘት ሁኔታ ተመልከት</span>
+                <ArrowRight className="w-5 h-5" />
               </button>
             )}
 
             <button
               onClick={resetForm}
-              className="w-full sm:w-auto px-8 py-3 bg-red-950 hover:bg-red-900 text-amber-200 font-bold rounded-xl shadow-lg transition-all border border-amber-500/30"
+              className="w-full sm:w-auto px-6 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all border border-slate-300"
             >
               ሌላ ተማሪ መዝግብ
             </button>
@@ -210,7 +239,7 @@ export const StudentRegistrationForm: React.FC<StudentRegistrationFormProps> = (
         /* Welcome Hero Card */
         <div className="bg-gradient-to-b from-white via-amber-50/30 to-amber-100/40 rounded-3xl shadow-xl border border-amber-200/60 overflow-hidden text-center p-6 sm:p-10">
           <div className="inline-flex p-3 rounded-2xl bg-red-950/10 text-red-950 mb-4 border border-amber-500/20">
-            <Sparkles className="w-8 h-8 text-amber-600" />
+            <EthiopianOrthodoxCross className="w-10 h-10 text-amber-700" />
           </div>
 
           <h2 className="text-2xl sm:text-3xl font-extrabold text-red-950 mb-3 font-serif">
@@ -239,14 +268,14 @@ export const StudentRegistrationForm: React.FC<StudentRegistrationFormProps> = (
           <div className="bg-gradient-to-r from-red-950 to-amber-950 text-white p-6 border-b border-amber-500/30">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-amber-200">የተማሪዎች ምዝገባ ቅጽ</h2>
+                <h2 className="text-xl font-bold text-amber-200 font-serif">የተማሪዎች ምዝገባ ቅጽ</h2>
                 <p className="text-xs text-amber-100/80 mt-1">
                   እባክዎን አስፈላጊውን መረጃ በትክክል ይሙሉ
                 </p>
               </div>
               <button
                 onClick={() => setShowForm(false)}
-                className="text-xs text-amber-300 hover:underline px-2 py-1 rounded bg-red-900/50"
+                className="text-xs text-amber-300 hover:underline px-2.5 py-1 rounded bg-red-900/50"
               >
                 ተመለስ
               </button>

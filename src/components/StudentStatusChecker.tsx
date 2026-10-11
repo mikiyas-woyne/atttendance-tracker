@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Student, AttendanceRecord } from '../types';
-import { Search, CheckCircle2, XCircle, Clock, Calendar, User, BookOpen, AlertCircle, Loader2, Sparkles, Award } from 'lucide-react';
+import { EthiopianOrthodoxCross } from './EthiopianOrthodoxCross';
+import { Search, CheckCircle2, XCircle, Clock, Calendar, User, BookOpen, AlertCircle, Loader2, Award, RefreshCw, UserPlus } from 'lucide-react';
 
 interface StudentStatusCheckerProps {
   initialStudentId?: string;
@@ -13,7 +14,10 @@ export const StudentStatusChecker: React.FC<StudentStatusCheckerProps> = ({
   initialStudentId = '',
   onGoToRegister,
 }) => {
-  const [searchId, setSearchId] = useState<string>(initialStudentId);
+  const storedDeviceStudentId = localStorage.getItem('my_student_id') || '';
+  const effectiveInitialId = initialStudentId || storedDeviceStudentId;
+
+  const [searchId, setSearchId] = useState<string>(effectiveInitialId);
   const [student, setStudent] = useState<Student | null>(null);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -21,15 +25,15 @@ export const StudentStatusChecker: React.FC<StudentStatusCheckerProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (initialStudentId.trim()) {
-      handleSearch(initialStudentId.trim());
+    if (effectiveInitialId.trim()) {
+      handleSearch(effectiveInitialId.trim());
     }
-  }, [initialStudentId]);
+  }, [effectiveInitialId]);
 
   const handleSearch = async (idToSearch?: string) => {
     const targetId = (idToSearch || searchId).trim().toUpperCase();
     if (!targetId) {
-      setErrorMessage('እባክዎን የተማሪ መለያ ቁጥርዎን ያስገቡ። (ለምሳሌ፡ FH-2026-1042)');
+      setErrorMessage('እባክዎን የተማሪ መለያ ቁጥርዎን ያስገቡ። (ለምሳሌ፡ FH-0001)');
       return;
     }
 
@@ -60,6 +64,9 @@ export const StudentStatusChecker: React.FC<StudentStatusCheckerProps> = ({
 
       setStudent(foundStudent);
 
+      // Save ID to device for future visits
+      localStorage.setItem('my_student_id', targetId);
+
       // 2. Query attendance records for this student
       const recsQ = query(
         collection(db, 'attendanceRecords'),
@@ -83,6 +90,14 @@ export const StudentStatusChecker: React.FC<StudentStatusCheckerProps> = ({
     }
   };
 
+  const handleClearSavedDeviceStudent = () => {
+    localStorage.removeItem('my_student_id');
+    setStudent(null);
+    setSearchId('');
+    setSearched(false);
+    setAttendanceRecords([]);
+  };
+
   // Stats calculation
   const totalRecordedDays = attendanceRecords.length;
   const presentDays = attendanceRecords.filter((r) => r.status === 'present').length;
@@ -97,7 +112,7 @@ export const StudentStatusChecker: React.FC<StudentStatusCheckerProps> = ({
       {/* Title Hero */}
       <div className="bg-gradient-to-r from-red-950 via-red-900 to-amber-950 rounded-2xl shadow-lg p-6 sm:p-8 text-white border-b-2 border-amber-500/40 text-center mb-6">
         <div className="w-12 h-12 bg-amber-500/20 border-2 border-amber-400/50 rounded-full flex items-center justify-center text-amber-300 mx-auto mb-3 shadow-inner">
-          <Sparkles className="w-7 h-7" />
+          <EthiopianOrthodoxCross className="w-8 h-8 text-amber-300" />
         </div>
         <h2 className="text-2xl sm:text-3xl font-extrabold text-amber-200 font-serif">
           የተማሪ የመገኘት ሁኔታ ማረጋገጫ
@@ -123,7 +138,7 @@ export const StudentStatusChecker: React.FC<StudentStatusCheckerProps> = ({
               required
               value={searchId}
               onChange={(e) => setSearchId(e.target.value)}
-              placeholder="የተማሪ መለያ ቁጥርዎን ያስገቡ (ለምሳሌ፡ FH-2026-1042)..."
+              placeholder="የተማሪ መለያ ቁጥርዎን ያስገቡ (ለምሳሌ፡ FH-0001)..."
               className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-slate-800 font-mono font-bold text-sm outline-none transition-all"
             />
           </div>
@@ -177,8 +192,19 @@ export const StudentStatusChecker: React.FC<StudentStatusCheckerProps> = ({
                   {student.fullName}
                 </h3>
               </div>
-              <div className="bg-amber-500/20 border border-amber-400/40 px-3.5 py-1.5 rounded-xl font-mono text-amber-200 text-sm font-extrabold self-start sm:self-auto">
-                {student.studentId}
+              
+              <div className="flex items-center gap-2">
+                <div className="bg-amber-500/20 border border-amber-400/40 px-3.5 py-1.5 rounded-xl font-mono text-amber-200 text-sm font-extrabold">
+                  {student.studentId}
+                </div>
+                <button
+                  onClick={handleClearSavedDeviceStudent}
+                  title="መለያ ቁጥር ቀይር"
+                  className="px-2.5 py-1.5 rounded-xl bg-red-900/60 hover:bg-red-800 text-amber-100 text-xs font-bold border border-amber-500/30 flex items-center gap-1"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">ቀይር</span>
+                </button>
               </div>
             </div>
 
@@ -308,15 +334,28 @@ export const StudentStatusChecker: React.FC<StudentStatusCheckerProps> = ({
             </div>
           </div>
 
+          {/* Sub Option: Register New Student */}
+          {onGoToRegister && (
+            <div className="text-center pt-2">
+              <button
+                onClick={onGoToRegister}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-300 transition-colors"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>ሌላ አዲስ ተማሪ መዝግብ</span>
+              </button>
+            </div>
+          )}
+
         </div>
       )}
 
       {!searched && !student && (
         <div className="bg-amber-50/60 border border-amber-200 rounded-2xl p-8 text-center text-amber-950 space-y-2 max-w-lg mx-auto mt-4">
-          <Sparkles className="w-8 h-8 text-amber-600 mx-auto mb-1" />
+          <EthiopianOrthodoxCross className="w-8 h-8 text-amber-700 mx-auto mb-1" />
           <h4 className="font-bold text-base font-serif">የመገኘት ሁኔታዎን ያረጋግጡ</h4>
           <p className="text-xs text-amber-900/80 leading-relaxed">
-            ከተመዘገቡ በኋላ የተሰጠዎትን የመለያ ቁጥር (ለምሳሌ፡ FH-2026-XXXX) በላይኛው ሳጥን ውስጥ በማስገባት «ሁኔታዬን ፈልግ» የሚለውን ይጫኑ።
+            ከተመዘገቡ በኋላ የተሰጠዎትን የመለያ ቁጥር (ለምሳሌ፡ FH-0001) በላይኛው ሳጥን ውስጥ በማስገባት «ሁኔታዬን ፈልግ» የሚለውን ይጫኑ።
           </p>
         </div>
       )}

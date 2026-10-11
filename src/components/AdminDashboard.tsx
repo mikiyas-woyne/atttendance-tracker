@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   collection,
   onSnapshot,
@@ -9,47 +9,59 @@ import {
   orderBy,
   addDoc,
 } from 'firebase/firestore';
-import { db, handleFirestoreError, OperationType } from '../lib/firebase';
+import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import { Student, AttendanceSession, AttendanceRecord, AttendanceStatus } from '../types';
+import { EthiopianOrthodoxCross } from './EthiopianOrthodoxCross';
+import html2canvas from 'html2canvas';
 import {
   Users,
   UserCheck,
   UserX,
   TrendingUp,
   Search,
-  Filter,
   Calendar,
-  CheckCircle,
+  CheckCircle2,
   XCircle,
   Clock,
   Download,
   Edit,
-  UserMinus,
-  UserCheck2,
   PlusCircle,
-  Printer,
   AlertTriangle,
   ChevronRight,
-  Info,
   Check,
   X,
   Loader2,
   FileSpreadsheet,
   History,
+  Award,
+  Settings,
+  LogOut,
+  Image,
+  Filter,
+  CheckSquare,
 } from 'lucide-react';
 
-const CLASS_OPTIONS = [
-  'ሕፃናት (ከ4-8 ዓመት)',
-  'መካከለኛ (ከ9-13 ዓመት)',
-  'ወጣቶች (ከ14-18 ዓመት)',
-  'ዓቢይ ክፍል (ከ19 ዓመት በላይ)',
-  'ቅዱስ ዮሐንስ ክፍል',
-  'ቅዱስ ዳዊት ክፍል',
+const ETHIOPIC_MONTHS = [
+  'መስከረም',
+  'ጥቅምት',
+  'ኅዳር',
+  'ታኅሣሥ',
+  'ጥር',
+  'የካቲት',
+  'መጋቢት',
+  'ሚያዝያ',
+  'ግንቦት',
+  'ሰኔ',
+  'ሐምሌ',
+  'ነሐሴ',
 ];
 
 export const AdminDashboard: React.FC = () => {
-  const [activeSubTab, setActiveSubTab] = useState<'overview' | 'students' | 'attendance' | 'reports'>('overview');
+  const { isAdmin, currentUser, logout } = useAuth();
+
+  // Three Main Tabs: 'attendance' (Students & Attendance), 'reports' (Attendance Reports), 'settings' (Settings)
+  const [activeMainTab, setActiveMainTab] = useState<'attendance' | 'reports' | 'settings'>('attendance');
 
   // Firestore Data State
   const [students, setStudents] = useState<Student[]>([]);
@@ -57,53 +69,50 @@ export const AdminDashboard: React.FC = () => {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Today Date String YYYY-MM-DD
+  // Attendance Date (Defaults to Today YYYY-MM-DD)
   const todayStr = new Date().toISOString().split('T')[0];
   const [selectedMeetingDate, setSelectedMeetingDate] = useState<string>(todayStr);
-  const [selectedClass, setSelectedClass] = useState<string>('ሁሉም ክፍሎች');
 
-  // Toast alert
+  // Attendance Marking Map: studentId -> { status: AttendanceStatus, reason: string }
+  const [markedMap, setMarkedMap] = useState<Record<string, { status?: AttendanceStatus; reason?: string }>>({});
+  const [savingAttendance, setSavingAttendance] = useState<boolean>(false);
+
+  // Search and Filters
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [attendanceStatusFilter, setAttendanceStatusFilter] = useState<'all' | 'unmarked' | 'present' | 'absent' | 'excused'>('all');
+
+  // Toast Notification State
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
-  // Student Search / Filters
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
-  const [classFilter, setClassFilter] = useState<string>('ሁሉም ክፍሎች');
-
-  // Attendance Marking State: map studentId -> AttendanceStatus
-  const [markedMap, setMarkedMap] = useState<Record<string, AttendanceStatus>>({});
-  const [savingAttendance, setSavingAttendance] = useState<boolean>(false);
-  const [attendanceFilter, setAttendanceFilter] = useState<'all' | 'unmarked' | 'present' | 'absent' | 'excused'>('all');
-
-  // Modals & Selection
+  // Modals & Selections
   const [selectedStudentForHistory, setSelectedStudentForHistory] = useState<Student | null>(null);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [showManualAddModal, setShowManualAddModal] = useState<boolean>(false);
 
-  // Manual Add Form State
+  // Manual Add Student Form
   const [manualName, setManualName] = useState<string>('');
   const [manualAge, setManualAge] = useState<string>('');
   const [manualGender, setManualGender] = useState<'ወንድ' | 'ሴት' | 'ያልተጠቀሰ'>('ወንድ');
-  const [manualClass, setManualClass] = useState<string>(CLASS_OPTIONS[0]);
   const [manualPhone, setManualPhone] = useState<string>('');
   const [manualGuardian, setManualGuardian] = useState<string>('');
 
-  // Report Date Range State
-  const [reportStartDate, setReportStartDate] = useState<string>(
-    new Date(Date.now() - 30 * 81000000).toISOString().split('T')[0]
-  );
-  const [reportEndDate, setReportEndDate] = useState<string>(todayStr);
-  const [reportClass, setReportClass] = useState<string>('ሁሉም ክፍሎች');
+  // Reports State
+  const [reportSubTab, setReportSubTab] = useState<'overall' | 'individual' | 'monthly' | 'ranking'>('overall');
+  const [selectedReportStudentId, setSelectedReportStudentId] = useState<string>('');
+  const [selectedReportYear, setSelectedReportYear] = useState<number>(new Date().getFullYear());
+  const [selectedReportMonth, setSelectedReportMonth] = useState<number>(new Date().getMonth() + 1); // 1-12
+  const [rankingMode, setRankingMode] = useState<'overall' | 'monthly'>('overall');
 
-  // Show Toast Function
+  // Refs for PNG Export
+  const reportCaptureRef = useRef<HTMLDivElement>(null);
+  const [isExportingPNG, setIsExportingPNG] = useState<boolean>(false);
+
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
     setToastMessage({ text, type });
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const { isAdmin, currentUser } = useAuth();
-
-  // 1. Subscribe to Firestore Collections
+  // 1. Subscribe to Real-Time Firestore Collections (Cross-Device Auto-Sync)
   useEffect(() => {
     if (!isAdmin) {
       setLoading(false);
@@ -123,7 +132,7 @@ export const AdminDashboard: React.FC = () => {
         setLoading(false);
       },
       (error) => {
-        console.warn('Students snapshot info:', error?.message || error);
+        console.warn('Students snapshot notice:', error?.message || error);
         setLoading(false);
       }
     );
@@ -138,7 +147,7 @@ export const AdminDashboard: React.FC = () => {
         setSessions(sessionList);
       },
       (error) => {
-        console.warn('Sessions snapshot info:', error?.message || error);
+        console.warn('Sessions snapshot notice:', error?.message || error);
       }
     );
 
@@ -152,7 +161,7 @@ export const AdminDashboard: React.FC = () => {
         setRecords(recordList);
       },
       (error) => {
-        console.warn('Records snapshot info:', error?.message || error);
+        console.warn('Records snapshot notice:', error?.message || error);
       }
     );
 
@@ -163,50 +172,123 @@ export const AdminDashboard: React.FC = () => {
     };
   }, [isAdmin, currentUser]);
 
-  // Sync Attendance Map when selectedMeetingDate or selectedClass or records change
+  // Sync Attendance Marking Map when Date or Records Change
   useEffect(() => {
-    const todayRecords = records.filter(
-      (r) =>
-        r.meetingDate === selectedMeetingDate &&
-        (selectedClass === 'ሁሉም ክፍሎች' || r.classId === selectedClass)
-    );
+    const existingDateRecords = records.filter((r) => r.meetingDate === selectedMeetingDate);
+    const initialMap: Record<string, { status?: AttendanceStatus; reason?: string }> = {};
 
-    const initialMap: Record<string, AttendanceStatus> = {};
-    todayRecords.forEach((r) => {
-      initialMap[r.studentId] = r.status;
+    existingDateRecords.forEach((r) => {
+      initialMap[r.studentId] = {
+        status: r.status,
+        reason: r.excusedReason || '',
+      };
     });
 
     setMarkedMap(initialMap);
-  }, [selectedMeetingDate, selectedClass, records]);
+  }, [selectedMeetingDate, records]);
 
-  // Calculated Statistics
-  const totalStudentsCount = students.length;
+  // Filter Active Students
   const activeStudents = students.filter((s) => s.status === 'active');
-  const activeStudentsCount = activeStudents.length;
+  const isDateAlreadyRecorded = sessions.some((s) => s.meetingDate === selectedMeetingDate);
 
-  const todayRecords = records.filter((r) => r.meetingDate === todayStr);
-  const presentTodayCount = todayRecords.filter((r) => r.status === 'present').length;
-  const absentTodayCount = todayRecords.filter((r) => r.status === 'absent').length;
-  const percentageToday =
-    activeStudentsCount > 0 ? Math.round((presentTodayCount / activeStudentsCount) * 100) : 0;
+  // Mark status for student
+  const handleSetStudentStatus = (studentId: string, status: AttendanceStatus) => {
+    setMarkedMap((prev) => ({
+      ...prev,
+      [studentId]: {
+        ...prev[studentId],
+        status,
+      },
+    }));
+  };
 
-  // Filtered Students for Management Tab
-  const filteredStudents = students.filter((student) => {
-    const matchesSearch =
-      student.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (student.phoneNumber && student.phoneNumber.includes(searchTerm));
+  // Set excused reason
+  const handleSetExcusedReason = (studentId: string, reason: string) => {
+    setMarkedMap((prev) => ({
+      ...prev,
+      [studentId]: {
+        ...prev[studentId],
+        status: 'excused',
+        reason,
+      },
+    }));
+  };
 
-    const matchesStatus =
-      statusFilter === 'all' || student.status === statusFilter;
+  // Mark all unmarked active students as Present
+  const handleMarkAllPresent = () => {
+    const updated = { ...markedMap };
+    activeStudents.forEach((student) => {
+      if (!updated[student.studentId]?.status) {
+        updated[student.studentId] = { status: 'present', reason: '' };
+      }
+    });
+    setMarkedMap(updated);
+    showToast('ያልተመዘገቡ ንቁ ተማሪዎች «ተገኝቷል» ተብለዋል። ለማስቀመጥ «አቴንዳንስ መዝግብ» የሚለውን ይጫኑ።');
+  };
 
-    const matchesClass =
-      classFilter === 'ሁሉም ክፍሎች' || student.classId === classFilter;
+  // Save Attendance Session and Records to Database
+  const handleSaveAttendance = async () => {
+    if (!selectedMeetingDate) {
+      showToast('እባክዎን የቀን መረጣ ያድርጉ።', 'error');
+      return;
+    }
 
-    return matchesSearch && matchesStatus && matchesClass;
-  });
+    setSavingAttendance(true);
 
-  // Action: Deactivate/Reactivate Student
+    try {
+      const sessionId = `session_${selectedMeetingDate}`;
+      const now = new Date().toISOString();
+
+      // Upsert Session document
+      const sessionRef = doc(db, 'attendanceSessions', sessionId);
+      await setDoc(
+        sessionRef,
+        {
+          sessionId,
+          meetingDate: selectedMeetingDate,
+          createdBy: currentUser?.email || 'superadmin',
+          createdAt: now,
+        },
+        { merge: true }
+      );
+
+      // Upsert marked student records
+      const recordsToSave = activeStudents.filter((s) => markedMap[s.studentId]?.status);
+
+      const batchPromises = recordsToSave.map(async (student) => {
+        const entry = markedMap[student.studentId];
+        const recordId = `${sessionId}_${student.studentId}`;
+        const recordRef = doc(db, 'attendanceRecords', recordId);
+
+        return setDoc(
+          recordRef,
+          {
+            recordId,
+            sessionId,
+            studentId: student.studentId,
+            studentName: student.fullName,
+            meetingDate: selectedMeetingDate,
+            status: entry.status,
+            excusedReason: entry.status === 'excused' ? entry.reason || '' : '',
+            markedBy: currentUser?.email || 'superadmin',
+            markedAt: now,
+            updatedAt: now,
+          },
+          { merge: true }
+        );
+      });
+
+      await Promise.all(batchPromises);
+      setSavingAttendance(false);
+      showToast(`የቀን ${selectedMeetingDate} አቴንዳንስ በተሳካ ሁኔታ ተመዝግቧል!`);
+    } catch (err) {
+      console.error('Attendance save error:', err);
+      setSavingAttendance(false);
+      showToast('አቴንዳንስ መዝገቡን ማስቀመጥ አልተቻለም።', 'error');
+    }
+  };
+
+  // Deactivate/Reactivate Student
   const handleToggleStudentStatus = async (student: Student) => {
     if (!student.id) return;
     const newStatus = student.status === 'active' ? 'inactive' : 'active';
@@ -217,7 +299,7 @@ export const AdminDashboard: React.FC = () => {
       });
       showToast(
         newStatus === 'inactive'
-          ? `${student.fullName} ከንቁ ተማሪዎች ዝርዝር ተወግዷል። (የቀደመ የመገኘት ታሪክ አልተሰረዘም)`
+          ? `${student.fullName} ከንቁ ተማሪዎች ዝርዝር ተወግዷል። (የቀደመ የመገኘት ታሪካቸው አልተሰረዘም)`
           : `${student.fullName} እንደገና ንቁ ተማሪ ሆኗል።`
       );
     } catch (err) {
@@ -226,7 +308,7 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  // Action: Save Edit Student Modal
+  // Edit Student Info
   const handleSaveEditStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingStudent || !editingStudent.id) return;
@@ -236,7 +318,6 @@ export const AdminDashboard: React.FC = () => {
         fullName: editingStudent.fullName,
         age: Number(editingStudent.age),
         gender: editingStudent.gender,
-        classId: editingStudent.classId,
         phoneNumber: editingStudent.phoneNumber || '',
         guardianPhone: editingStudent.guardianPhone || '',
         updatedAt: new Date().toISOString(),
@@ -249,7 +330,7 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  // Action: Add Student Manually by Admin
+  // Manual Add Student by Admin (Sequential ID starting from 0001)
   const handleManualAddStudent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualName.trim() || !manualAge) {
@@ -258,9 +339,21 @@ export const AdminDashboard: React.FC = () => {
     }
 
     try {
-      const year = new Date().getFullYear();
-      const randomDigits = Math.floor(1000 + Math.random() * 9000);
-      const studentId = `FH-${year}-${randomDigits}`;
+      let maxNumber = 0;
+      students.forEach((s) => {
+        if (s.studentId && typeof s.studentId === 'string') {
+          const matches = s.studentId.match(/(\d+)$/);
+          if (matches && matches[1]) {
+            const num = parseInt(matches[1], 10);
+            if (!isNaN(num) && num > maxNumber) {
+              maxNumber = num;
+            }
+          }
+        }
+      });
+
+      const nextNum = maxNumber + 1;
+      const studentId = `FH-${String(nextNum).padStart(4, '0')}`;
       const now = new Date().toISOString();
 
       const newStudent: Student = {
@@ -268,7 +361,6 @@ export const AdminDashboard: React.FC = () => {
         fullName: manualName.trim(),
         age: parseInt(manualAge, 10),
         gender: manualGender,
-        classId: manualClass,
         phoneNumber: manualPhone.trim() || '',
         guardianPhone: manualGuardian.trim() || '',
         registrationDate: new Date().toLocaleDateString('am-ET'),
@@ -280,7 +372,6 @@ export const AdminDashboard: React.FC = () => {
       await addDoc(collection(db, 'students'), newStudent);
       showToast(`ተማሪ ${manualName} በመለያ ቁጥር ${studentId} ተመዝግቧል።`);
 
-      // Reset
       setShowManualAddModal(false);
       setManualName('');
       setManualAge('');
@@ -292,161 +383,128 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  // Action: Mark All Present
-  const handleMarkAllPresent = () => {
-    const updatedMap = { ...markedMap };
-    activeStudents.forEach((student) => {
-      if (selectedClass === 'ሁሉም ክፍሎች' || student.classId === selectedClass) {
-        updatedMap[student.studentId] = 'present';
-      }
-    });
-    setMarkedMap(updatedMap);
-    showToast('ሁሉም ንቁ ተማሪዎች «ተገኝቷል» ተብለው ተመርጠዋል። ለመመዝገብ «መገኘትን መዝግብ» የሚለውን ይጫኑ።');
-  };
-
-  // Action: Save Attendance Records to Firestore
-  const handleSaveAttendance = async () => {
-    if (!selectedMeetingDate) {
-      showToast('እባክዎን የቀን መረጣ ያድርጉ።', 'error');
-      return;
-    }
-
-    setSavingAttendance(true);
+  // Export Report as PNG Image using html2canvas
+  const handleExportPNG = async (reportTitle: string) => {
+    if (!reportCaptureRef.current) return;
+    setIsExportingPNG(true);
 
     try {
-      const sessionId = `session_${selectedMeetingDate}_${selectedClass.replace(/[^a-zA-Z0-9]/g, '_')}`;
-      const now = new Date().toISOString();
-
-      // Ensure session document exists
-      const sessionRef = doc(db, 'attendanceSessions', sessionId);
-      await setDoc(
-        sessionRef,
-        {
-          sessionId,
-          meetingDate: selectedMeetingDate,
-          classId: selectedClass,
-          createdBy: 'admin',
-          createdAt: now,
-        },
-        { merge: true }
-      );
-
-      // Save each marked student record
-      const activeStudentsToSave = activeStudents.filter(
-        (s) => selectedClass === 'ሁሉም ክፍሎች' || s.classId === selectedClass
-      );
-
-      const batchPromises = activeStudentsToSave.map(async (student) => {
-        const status = markedMap[student.studentId] || 'absent';
-        const recordId = `${sessionId}_${student.studentId}`;
-        const recordRef = doc(db, 'attendanceRecords', recordId);
-
-        return setDoc(
-          recordRef,
-          {
-            recordId,
-            sessionId,
-            studentId: student.studentId,
-            studentName: student.fullName,
-            classId: student.classId || '',
-            meetingDate: selectedMeetingDate,
-            status,
-            markedBy: 'admin',
-            markedAt: now,
-            updatedAt: now,
-          },
-          { merge: true }
-        );
+      const canvas = await html2canvas(reportCaptureRef.current, {
+        scale: 2, // High resolution
+        useCORS: true,
+        backgroundColor: '#ffffff',
       });
 
-      await Promise.all(batchPromises);
-      setSavingAttendance(false);
-      showToast(`የቀን ${selectedMeetingDate} የመገኘት መዝገብ በተሳካ ሁኔታ ተመዝግቧል!`);
-    } catch (err) {
-      console.error('Attendance save error:', err);
-      setSavingAttendance(false);
-      showToast('የመገኘት መዝገብ ማስቀመጥ አልተቻለም።', 'error');
+      const image = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = image;
+      link.download = `Freihaymanot_${reportTitle}_${new Date().toISOString().split('T')[0]}.png`;
+      link.click();
+      setIsExportingPNG(false);
+      showToast('ሪፖርቱ በ PNG ፎቶግራፍ በተሳካ ሁኔታ ወርዷል።');
+    } catch (e) {
+      console.error('PNG Export error:', e);
+      setIsExportingPNG(false);
+      showToast('ሪፖርቱን ወደ PNG ማውረድ አልተቻለም።', 'error');
     }
   };
 
-  // Export Student List to CSV
-  const handleExportStudentsCSV = () => {
-    if (students.length === 0) return;
-    const headers = ['መለያ ቁጥር,ሙሉ ስም,ዕድሜ,ጾታ,ክፍል,ስልክ,የወላጅ ስልክ,ሁኔታ,የተመዘገበበት ቀን'];
-    const rows = students.map((s) =>
-      `"${s.studentId}","${s.fullName}",${s.age},"${s.gender || ''}","${s.classId || ''}","${s.phoneNumber || ''}","${s.guardianPhone || ''}","${s.status === 'active' ? 'ንቁ' : 'ያልተገለገለ'}","${s.registrationDate}"`
-    );
+  // Filtered Students for Tab 1
+  const filteredStudents = students.filter((s) => {
+    const query = searchTerm.toLowerCase();
+    const matchesSearch =
+      s.fullName.toLowerCase().includes(query) ||
+      s.studentId.toLowerCase().includes(query) ||
+      (s.phoneNumber && s.phoneNumber.includes(query));
 
-    const csvContent = '\uFEFF' + [headers, ...rows].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `Freihaymanot_Students_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+    const statusObj = markedMap[s.studentId];
+    if (attendanceStatusFilter === 'unmarked') return matchesSearch && !statusObj?.status;
+    if (attendanceStatusFilter === 'present') return matchesSearch && statusObj?.status === 'present';
+    if (attendanceStatusFilter === 'absent') return matchesSearch && statusObj?.status === 'absent';
+    if (attendanceStatusFilter === 'excused') return matchesSearch && statusObj?.status === 'excused';
 
-  // Calculate Reports Data
-  const filteredReportRecords = records.filter((r) => {
-    const inDateRange = r.meetingDate >= reportStartDate && r.meetingDate <= reportEndDate;
-    const inClass = reportClass === 'ሁሉም ክፍሎች' || r.classId === reportClass;
-    return inDateRange && inClass;
+    return matchesSearch;
   });
 
-  const uniqueReportMeetingDates = Array.from(
-    new Set(filteredReportRecords.map((r) => r.meetingDate))
-  );
+  // Calculate Reports Calculations
+  const totalRecordedSessionsCount = sessions.length;
+  const totalPresentRecordsCount = records.filter((r) => r.status === 'present').length;
+  const totalAbsentRecordsCount = records.filter((r) => r.status === 'absent').length;
+  const totalExcusedRecordsCount = records.filter((r) => r.status === 'excused').length;
+  const totalAllRecordsCount = totalPresentRecordsCount + totalAbsentRecordsCount + totalExcusedRecordsCount;
+  const overallAttendancePercentage =
+    totalAllRecordsCount > 0 ? Math.round((totalPresentRecordsCount / totalAllRecordsCount) * 100) : 0;
 
-  const totalSessionsInReport = uniqueReportMeetingDates.length;
+  // Selected Student for Individual Report
+  const activeReportStudent =
+    students.find((s) => s.studentId === selectedReportStudentId) || students[0] || null;
 
-  const studentReportList = activeStudents
-    .filter((s) => reportClass === 'ሁሉም ክፍሎች' || s.classId === reportClass)
-    .map((student) => {
-      const studentRecs = filteredReportRecords.filter((r) => r.studentId === student.studentId);
-      const presentCount = studentRecs.filter((r) => r.status === 'present').length;
-      const absentCount = studentRecs.filter((r) => r.status === 'absent').length;
-      const excusedCount = studentRecs.filter((r) => r.status === 'excused').length;
+  const activeStudentRecords = activeReportStudent
+    ? records.filter((r) => r.studentId === activeReportStudent.studentId)
+    : [];
 
-      const totalRecorded = presentCount + absentCount + excusedCount;
-      const pct = totalRecorded > 0 ? Math.round((presentCount / totalRecorded) * 100) : 0;
+  const indPresent = activeStudentRecords.filter((r) => r.status === 'present').length;
+  const indAbsent = activeStudentRecords.filter((r) => r.status === 'absent').length;
+  const indExcused = activeStudentRecords.filter((r) => r.status === 'excused').length;
+  const indTotal = indPresent + indAbsent + indExcused;
+  const indPct = indTotal > 0 ? Math.round((indPresent / indTotal) * 100) : 0;
 
-      return {
-        student,
-        presentCount,
-        absentCount,
-        excusedCount,
-        totalRecorded,
-        percentage: pct,
-        isFrequentAbsentee: totalRecorded >= 2 && pct < 50,
-      };
-    });
+  // Monthly Report Calculation
+  const monthlyFilteredRecords = records.filter((r) => {
+    if (!r.meetingDate) return false;
+    const parts = r.meetingDate.split('-');
+    if (parts.length < 2) return false;
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    return y === selectedReportYear && m === selectedReportMonth;
+  });
 
-  // Export Attendance Report CSV
-  const handleExportAttendanceReportCSV = () => {
-    if (studentReportList.length === 0) return;
-    const headers = ['መለያ ቁጥር,ሙሉ ስም,ክፍል,የተገኙበት,የቀሩበት,በምክንያት,የመገኘት መጠን (%)'];
-    const rows = studentReportList.map(
-      (item) =>
-        `"${item.student.studentId}","${item.student.fullName}","${item.student.classId || ''}",${item.presentCount},${item.absentCount},${item.excusedCount},${item.percentage}%`
-    );
+  const monthlyStudentStats = activeStudents.map((student) => {
+    const sRecs = monthlyFilteredRecords.filter((r) => r.studentId === student.studentId);
+    const p = sRecs.filter((r) => r.status === 'present').length;
+    const a = sRecs.filter((r) => r.status === 'absent').length;
+    const e = sRecs.filter((r) => r.status === 'excused').length;
+    const tot = p + a + e;
+    const pct = tot > 0 ? Math.round((p / tot) * 100) : 0;
 
-    const csvContent = '\uFEFF' + [headers, ...rows].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `Freihaymanot_Attendance_Report_${reportStartDate}_to_${reportEndDate}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+    return {
+      student,
+      present: p,
+      absent: a,
+      excused: e,
+      total: tot,
+      percentage: pct,
+    };
+  });
+
+  // Ranking Calculation
+  const overallStudentStats = activeStudents.map((student) => {
+    const sRecs = records.filter((r) => r.studentId === student.studentId);
+    const p = sRecs.filter((r) => r.status === 'present').length;
+    const a = sRecs.filter((r) => r.status === 'absent').length;
+    const e = sRecs.filter((r) => r.status === 'excused').length;
+    const tot = p + a + e;
+    const pct = tot > 0 ? Math.round((p / tot) * 100) : 0;
+
+    return {
+      student,
+      present: p,
+      absent: a,
+      excused: e,
+      total: tot,
+      percentage: pct,
+    };
+  });
+
+  const rankingSourceList = rankingMode === 'monthly' ? monthlyStudentStats : overallStudentStats;
+  const rankedStudents = [...rankingSourceList]
+    .filter((item) => item.total > 0) // Fair tie-handling: exclude students with 0 recorded sessions
+    .sort((a, b) => b.percentage - a.percentage || b.present - a.present);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       
-      {/* Toast Notification */}
+      {/* Toast Alert Notification */}
       {toastMessage && (
         <div
           className={`fixed bottom-5 right-5 z-50 px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 border text-sm font-semibold transition-all animate-bounce ${
@@ -458,28 +516,35 @@ export const AdminDashboard: React.FC = () => {
           {toastMessage.type === 'error' ? (
             <XCircle className="w-5 h-5 text-red-400" />
           ) : (
-            <CheckCircle className="w-5 h-5 text-emerald-400" />
+            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
           )}
           <span>{toastMessage.text}</span>
         </div>
       )}
 
-      {/* Admin Dashboard Header / Tabs */}
+      {/* Main Admin Dashboard Container */}
       <div className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden mb-6">
+        
+        {/* Organization Branding Banner */}
         <div className="bg-gradient-to-r from-red-950 via-red-900 to-amber-950 p-6 text-white border-b-2 border-amber-500/40">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-bold text-amber-200 font-serif">
-                የአስተዳዳሪ ማዕከል (Admin Dashboard)
-              </h2>
-              <p className="text-xs sm:text-sm text-amber-100/80 mt-1">
-                ፍሬ ሃይማኖት ሰንበት ትምህርት ቤት — የተማሪዎች መረጃ እና የመገኘት መዝገብ ማስተዳደሪያ
-              </p>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-amber-500/20 border-2 border-amber-400/50 flex items-center justify-center shrink-0">
+                <EthiopianOrthodoxCross className="w-8 h-8 text-amber-300" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-amber-200 font-serif">
+                  ፍሬ ሃይማኖት ሰንበት ትምህርት ቤት
+                </h2>
+                <p className="text-xs sm:text-sm text-amber-100/80 font-medium">
+                  የተማሪዎች መዝገብ እና የአቴንዳንስ ማስተዳደሪያ ማዕከል
+                </p>
+              </div>
             </div>
-            
+
             <button
               onClick={() => setShowManualAddModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-red-950 font-bold rounded-xl text-sm shadow transition-all self-start sm:self-auto"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-red-950 font-bold rounded-xl text-sm shadow transition-all self-start sm:self-auto border border-amber-400/60"
             >
               <PlusCircle className="w-4 h-4" />
               <span>አዲስ ተማሪ በእጅ መዝግብ</span>
@@ -487,54 +552,42 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Sub-Navigation Tabs */}
-        <div className="flex border-b border-slate-200 overflow-x-auto bg-slate-50 scrollbar-none">
+        {/* 3 Main Tabs Navigation */}
+        <div className="flex border-b border-slate-200 bg-slate-50">
           <button
-            onClick={() => setActiveSubTab('overview')}
-            className={`flex items-center gap-2 px-5 py-3 text-sm font-bold whitespace-nowrap transition-colors border-b-2 ${
-              activeSubTab === 'overview'
+            onClick={() => setActiveMainTab('attendance')}
+            className={`flex-1 py-4 px-3 text-center text-sm font-extrabold transition-all border-b-2 flex items-center justify-center gap-2 ${
+              activeMainTab === 'attendance'
                 ? 'border-red-900 text-red-950 bg-white shadow-xs'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <TrendingUp className="w-4 h-4" />
-            <span>አጠቃላይ መረጃ</span>
+            <Users className="w-4.5 h-4.5 text-amber-800" />
+            <span>1. ተማሪዎች እና አቴንዳንስ</span>
           </button>
 
           <button
-            onClick={() => setActiveSubTab('students')}
-            className={`flex items-center gap-2 px-5 py-3 text-sm font-bold whitespace-nowrap transition-colors border-b-2 ${
-              activeSubTab === 'students'
+            onClick={() => setActiveMainTab('reports')}
+            className={`flex-1 py-4 px-3 text-center text-sm font-extrabold transition-all border-b-2 flex items-center justify-center gap-2 ${
+              activeMainTab === 'reports'
                 ? 'border-red-900 text-red-950 bg-white shadow-xs'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <Users className="w-4 h-4" />
-            <span>የተማሪዎች መዝገብ ({totalStudentsCount})</span>
+            <FileSpreadsheet className="w-4.5 h-4.5 text-amber-800" />
+            <span>2. የአቴንዳንስ ሪፖርት</span>
           </button>
 
           <button
-            onClick={() => setActiveSubTab('attendance')}
-            className={`flex items-center gap-2 px-5 py-3 text-sm font-bold whitespace-nowrap transition-colors border-b-2 ${
-              activeSubTab === 'attendance'
+            onClick={() => setActiveMainTab('settings')}
+            className={`flex-1 py-4 px-3 text-center text-sm font-extrabold transition-all border-b-2 flex items-center justify-center gap-2 ${
+              activeMainTab === 'settings'
                 ? 'border-red-900 text-red-950 bg-white shadow-xs'
                 : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
-            <CheckCircle className="w-4 h-4 text-emerald-600" />
-            <span>የመገኘት መዝገብ</span>
-          </button>
-
-          <button
-            onClick={() => setActiveSubTab('reports')}
-            className={`flex items-center gap-2 px-5 py-3 text-sm font-bold whitespace-nowrap transition-colors border-b-2 ${
-              activeSubTab === 'reports'
-                ? 'border-red-900 text-red-950 bg-white shadow-xs'
-                : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-            }`}
-          >
-            <FileSpreadsheet className="w-4 h-4" />
-            <span>የመገኘት ሪፖርት</span>
+            <Settings className="w-4.5 h-4.5 text-amber-800" />
+            <span>3. ቅንብሮች</span>
           </button>
         </div>
       </div>
@@ -542,404 +595,108 @@ export const AdminDashboard: React.FC = () => {
       {loading ? (
         <div className="bg-white rounded-2xl p-12 text-center shadow-md border border-slate-200">
           <Loader2 className="w-10 h-10 animate-spin text-amber-600 mx-auto mb-3" />
-          <p className="text-slate-600 font-medium">የተማሪዎች መረጃ ከማዕከላዊ ዳታቤዝ እየተጫነ ነው...</p>
+          <p className="text-slate-600 font-medium">የተማሪዎች እና የአቴንዳንስ መረጃ ከማዕከላዊ ዳታቤዝ እየተጫነ ነው...</p>
         </div>
       ) : (
         <>
-          {/* TAB 1: OVERVIEW */}
-          {activeSubTab === 'overview' && (
+          {/* TAB 1: STUDENTS & ATTENDANCE (ተማሪዎች እና አቴንዳንስ) */}
+          {activeMainTab === 'attendance' && (
             <div className="space-y-6 animate-fade-in">
-              {/* Stat Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                      ጠቅላላ የተመዘገቡ ተማሪዎች
-                    </p>
-                    <h3 className="text-3xl font-extrabold text-slate-900 mt-1 font-mono">
-                      {totalStudentsCount}
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-1">({activeStudentsCount} ንቁ ተማሪዎች)</p>
-                  </div>
-                  <div className="p-3 bg-amber-100 rounded-2xl text-amber-800">
-                    <Users className="w-7 h-7" />
-                  </div>
-                </div>
-
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">
-                      ዛሬ የተገኙ
-                    </p>
-                    <h3 className="text-3xl font-extrabold text-emerald-700 mt-1 font-mono">
-                      {presentTodayCount}
-                    </h3>
-                    <p className="text-xs text-emerald-600 mt-1">የዛሬ መገኘት</p>
-                  </div>
-                  <div className="p-3 bg-emerald-100 rounded-2xl text-emerald-800">
-                    <UserCheck className="w-7 h-7" />
-                  </div>
-                </div>
-
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold text-red-700 uppercase tracking-wider">
-                      ዛሬ ያልተገኙ
-                    </p>
-                    <h3 className="text-3xl font-extrabold text-red-700 mt-1 font-mono">
-                      {absentTodayCount}
-                    </h3>
-                    <p className="text-xs text-red-600 mt-1">የዛሬ ቀሪ</p>
-                  </div>
-                  <div className="p-3 bg-red-100 rounded-2xl text-red-800">
-                    <UserX className="w-7 h-7" />
-                  </div>
-                </div>
-
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-semibold text-amber-800 uppercase tracking-wider">
-                      የዛሬ የመገኘት መጠን
-                    </p>
-                    <h3 className="text-3xl font-extrabold text-amber-900 mt-1 font-mono">
-                      {percentageToday}%
-                    </h3>
-                    <p className="text-xs text-amber-700 mt-1">የመገኘት መቶኛ</p>
-                  </div>
-                  <div className="p-3 bg-amber-100 rounded-2xl text-amber-900">
-                    <TrendingUp className="w-7 h-7" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick Actions & Recent Meetings */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                {/* Recent Attendance Sessions List */}
-                <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-                  <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2 font-serif">
-                    <Calendar className="w-5 h-5 text-amber-600" />
-                    <span>የቅርብ ጊዜ የመገኘት መዝገብ ክፍለ-ጊዜያት</span>
-                  </h3>
-
-                  {sessions.length === 0 ? (
-                    <div className="text-center py-8 bg-slate-50 rounded-xl border border-dashed border-slate-300">
-                      <Clock className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                      <p className="text-sm text-slate-600">እስካሁን የመገኘት መዝገብ አልተመዘገበም።</p>
-                      <button
-                        onClick={() => setActiveSubTab('attendance')}
-                        className="mt-3 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-red-950 text-xs font-bold rounded-lg"
-                      >
-                        የዛሬ መገኘት መዝግብ
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-slate-100">
-                      {sessions
-                        .sort((a, b) => b.meetingDate.localeCompare(a.meetingDate))
-                        .slice(0, 5)
-                        .map((sess) => {
-                          const sessRecords = records.filter((r) => r.sessionId === sess.sessionId);
-                          const pCount = sessRecords.filter((r) => r.status === 'present').length;
-                          const aCount = sessRecords.filter((r) => r.status === 'absent').length;
-
-                          return (
-                            <div key={sess.sessionId} className="py-3 flex items-center justify-between">
-                              <div>
-                                <span className="text-sm font-bold text-slate-800 font-mono">
-                                  {sess.meetingDate}
-                                </span>
-                                <span className="ml-3 text-xs bg-amber-100 text-amber-900 px-2 py-0.5 rounded-md font-medium">
-                                  {sess.classId}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-3 text-xs font-medium">
-                                <span className="text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                                  {pCount} የተገኙ
-                                </span>
-                                <span className="text-red-700 bg-red-50 px-2.5 py-1 rounded-full border border-red-200">
-                                  {aCount} የቀሩ
-                                </span>
-                                <button
-                                  onClick={() => {
-                                    setSelectedMeetingDate(sess.meetingDate);
-                                    setSelectedClass(sess.classId);
-                                    setActiveSubTab('attendance');
-                                  }}
-                                  className="p-1 text-slate-400 hover:text-amber-800"
-                                  title="ይህንን ቀን ክፈት"
-                                >
-                                  <ChevronRight className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Quick Shortcuts */}
-                <div className="bg-gradient-to-b from-red-950 to-amber-950 rounded-2xl shadow-sm p-6 text-white border border-amber-500/30">
-                  <h3 className="text-lg font-bold text-amber-200 mb-4 font-serif">
-                    ፈጣን ተግባራት
-                  </h3>
-                  <div className="space-y-3">
-                    <button
-                      onClick={() => setActiveSubTab('attendance')}
-                      className="w-full py-3 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 text-red-950 font-bold text-sm shadow transition-all flex items-center justify-between"
-                    >
-                      <span>የዛሬ መገኘት መዝግብ</span>
-                      <CheckCircle className="w-5 h-5" />
-                    </button>
-
-                    <button
-                      onClick={() => setShowManualAddModal(true)}
-                      className="w-full py-3 px-4 rounded-xl bg-red-900/80 hover:bg-red-800 text-amber-100 font-bold text-sm border border-amber-500/30 transition-all flex items-center justify-between"
-                    >
-                      <span>አዲስ ተማሪ መዝግብ</span>
-                      <PlusCircle className="w-5 h-5 text-amber-300" />
-                    </button>
-
-                    <button
-                      onClick={() => setActiveSubTab('reports')}
-                      className="w-full py-3 px-4 rounded-xl bg-red-900/80 hover:bg-red-800 text-amber-100 font-bold text-sm border border-amber-500/30 transition-all flex items-center justify-between"
-                    >
-                      <span>የመገኘት ሪፖርት ተመልከት</span>
-                      <FileSpreadsheet className="w-5 h-5 text-amber-300" />
-                    </button>
-
-                    <button
-                      onClick={handleExportStudentsCSV}
-                      className="w-full py-3 px-4 rounded-xl bg-red-900/80 hover:bg-red-800 text-amber-100 font-bold text-sm border border-amber-500/30 transition-all flex items-center justify-between"
-                    >
-                      <span>የተማሪዎች ዝርዝር CSV አውርድ</span>
-                      <Download className="w-5 h-5 text-amber-300" />
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          )}
-
-          {/* TAB 2: REGISTERED STUDENTS MANAGEMENT */}
-          {activeSubTab === 'students' && (
-            <div className="space-y-5 animate-fade-in">
-              {/* Search and Filters Bar */}
-              <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-3 items-center justify-between">
-                {/* Search */}
-                <div className="relative w-full md:w-80">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="በስም ወይም በመለያ ቁጥር ፈልግ..."
-                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 text-sm outline-none"
-                  />
-                </div>
-
-                {/* Filter Controls */}
-                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                  <select
-                    value={classFilter}
-                    onChange={(e) => setClassFilter(e.target.value)}
-                    className="px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white outline-none"
-                  >
-                    <option value="ሁሉም ክፍሎች">ሁሉም ክፍሎች</option>
-                    {CLASS_OPTIONS.map((cls) => (
-                      <option key={cls} value={cls}>
-                        {cls}
-                      </option>
-                    ))}
-                  </select>
-
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as any)}
-                    className="px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white outline-none"
-                  >
-                    <option value="all">ሁሉም ሁኔታዎች</option>
-                    <option value="active">ንቁ ብቻ</option>
-                    <option value="inactive">ያልተገለገለ ብቻ</option>
-                  </select>
-
-                  <button
-                    onClick={handleExportStudentsCSV}
-                    className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-colors"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>CSV</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Student Table */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold text-xs uppercase tracking-wider">
-                        <th className="p-3.5">መለያ ቁጥር</th>
-                        <th className="p-3.5">ሙሉ ስም</th>
-                        <th className="p-3.5">ዕድሜ</th>
-                        <th className="p-3.5">ክፍል</th>
-                        <th className="p-3.5">የተመዘገበበት ቀን</th>
-                        <th className="p-3.5">ሁኔታ</th>
-                        <th className="p-3.5 text-right">ተግባራት</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-slate-800">
-                      {filteredStudents.length === 0 ? (
-                        <tr>
-                          <td colSpan={7} className="text-center py-8 text-slate-500">
-                            ምንም የተማሪ መረጃ አልተገኘም።
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredStudents.map((student) => (
-                          <tr key={student.id || student.studentId} className="hover:bg-slate-50/80 transition-colors">
-                            <td className="p-3.5 font-mono font-bold text-amber-900">
-                              {student.studentId}
-                            </td>
-                            <td className="p-3.5 font-medium">{student.fullName}</td>
-                            <td className="p-3.5">{student.age} ዓመት</td>
-                            <td className="p-3.5">
-                              <span className="bg-amber-50 text-amber-900 border border-amber-200 text-xs font-semibold px-2.5 py-1 rounded-md">
-                                {student.classId || 'ያልተገለጸ'}
-                              </span>
-                            </td>
-                            <td className="p-3.5 text-xs text-slate-500">{student.registrationDate}</td>
-                            <td className="p-3.5">
-                              {student.status === 'active' ? (
-                                <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-full border border-emerald-200">
-                                  <Check className="w-3 h-3" /> ንቁ
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-500 text-xs font-bold px-2.5 py-1 rounded-full border border-slate-200">
-                                  <X className="w-3 h-3" /> ያልተገለገለ
-                                </span>
-                              )}
-                            </td>
-                            <td className="p-3.5 text-right space-x-1 space-x-reverse">
-                              <button
-                                onClick={() => setSelectedStudentForHistory(student)}
-                                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors"
-                                title="የመገኘት ታሪክ ተመልከት"
-                              >
-                                <History className="w-3.5 h-3.5 inline mr-1" />
-                                ታሪክ
-                              </button>
-
-                              <button
-                                onClick={() => setEditingStudent(student)}
-                                className="px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold transition-colors"
-                                title="መረጃ አስተካክል"
-                              >
-                                <Edit className="w-3.5 h-3.5 inline mr-1" />
-                                አስተካክል
-                              </button>
-
-                              <button
-                                onClick={() => handleToggleStudentStatus(student)}
-                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${
-                                  student.status === 'active'
-                                    ? 'bg-red-50 hover:bg-red-100 text-red-700 border border-red-200'
-                                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'
-                                }`}
-                                title={student.status === 'active' ? 'አቦዝን' : 'እንደገና አንቀሳቅስ'}
-                              >
-                                {student.status === 'active' ? 'አቦዝን' : 'አንቀሳቅስ'}
-                              </button>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 3: ATTENDANCE TRACKING */}
-          {activeSubTab === 'attendance' && (
-            <div className="space-y-5 animate-fade-in">
-              {/* Session Date & Class Controls */}
+              
+              {/* Date & Session Status Summary Banner */}
               <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
-                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                
+                <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
                   <div>
                     <label className="block text-xs font-bold text-slate-600 mb-1">
-                      የስብሰባ ቀን (Date)
+                      የአቴንዳንስ ቀን (Attendance Date)
                     </label>
-                    <input
-                      type="date"
-                      value={selectedMeetingDate}
-                      onChange={(e) => setSelectedMeetingDate(e.target.value)}
-                      className="px-3 py-2 rounded-xl border border-slate-300 font-mono text-sm bg-white outline-none focus:ring-2 focus:ring-amber-500"
-                    />
+                    <div className="relative">
+                      <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                      <input
+                        type="date"
+                        value={selectedMeetingDate}
+                        onChange={(e) => setSelectedMeetingDate(e.target.value)}
+                        className="pl-9 pr-3 py-2 rounded-xl border border-slate-300 font-mono text-sm text-slate-800 bg-white outline-none focus:ring-2 focus:ring-amber-500 font-bold"
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 mb-1">
-                      የትምህርት ክፍል/ቡድን
-                    </label>
-                    <select
-                      value={selectedClass}
-                      onChange={(e) => setSelectedClass(e.target.value)}
-                      className="px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white outline-none focus:ring-2 focus:ring-amber-500"
-                    >
-                      <option value="ሁሉም ክፍሎች">ሁሉም ክፍሎች</option>
-                      {CLASS_OPTIONS.map((cls) => (
-                        <option key={cls} value={cls}>
-                          {cls}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="pt-5 sm:pt-0">
+                    {isDateAlreadyRecorded ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+                        <span>የዚህ ቀን አቴንዳንስ ተመዝግቧል</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                        <Clock className="w-4 h-4 text-amber-800" />
+                        <span>የዚህ ቀን አቴንዳንስ አልተመዘገበም</span>
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+                {/* Total Counter & Action Buttons */}
+                <div className="flex flex-wrap items-center justify-end gap-2 w-full md:w-auto">
+                  <div className="bg-slate-100 px-3.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 font-bold">
+                    ጠቅላላ የተመዘገቡ ተማሪዎች፡ <span className="text-amber-900 font-mono text-sm">{students.length}</span>
+                  </div>
+
                   <button
                     onClick={handleMarkAllPresent}
-                    className="px-4 py-2.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold text-xs border border-amber-300 shadow-xs transition-all flex items-center gap-1.5"
+                    className="px-3.5 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold text-xs border border-amber-300 shadow-xs transition-all flex items-center gap-1.5"
                   >
-                    <CheckCircle className="w-4 h-4 text-emerald-700" />
+                    <CheckSquare className="w-4 h-4 text-emerald-700" />
                     <span>ሁሉንም ተገኝቷል በል</span>
                   </button>
 
                   <button
                     onClick={handleSaveAttendance}
                     disabled={savingAttendance}
-                    className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-red-950 to-amber-950 hover:from-red-900 hover:to-amber-900 text-amber-200 font-bold text-sm shadow-md transition-all flex items-center gap-2 border border-amber-400/40 disabled:opacity-50"
+                    className="px-5 py-2 rounded-xl bg-gradient-to-r from-red-950 to-amber-950 hover:from-red-900 hover:to-amber-900 text-amber-200 font-bold text-sm shadow-md transition-all flex items-center gap-2 border border-amber-400/40 disabled:opacity-50"
                   >
                     {savingAttendance ? (
                       <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
                     ) : (
-                      <CheckCircle className="w-4 h-4 text-emerald-400" />
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                     )}
-                    <span>መገኘትን መዝግብ</span>
+                    <span>አቴንዳንስ መዝግብ / አስቀምጥ</span>
                   </button>
                 </div>
+
               </div>
 
-              {/* Status Filter Pills & Count Summaries */}
-              <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-slate-600 mr-2">ማጣሪያ፡</span>
+              {/* Search and Status Filter Controls */}
+              <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row gap-3 items-center justify-between">
+                
+                {/* Search Field */}
+                <div className="relative w-full md:w-80">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="ተማሪ በስም ወይም በመለያ ቁጥር ፈልግ..."
+                    className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 focus:ring-2 focus:ring-amber-500 text-sm outline-none text-slate-800"
+                  />
+                </div>
+
+                {/* Filter Pills */}
+                <div className="flex flex-wrap items-center gap-1.5 text-xs w-full md:w-auto">
+                  <span className="font-bold text-slate-500 mr-1">ማጣሪያ፡</span>
                   {(['all', 'unmarked', 'present', 'absent', 'excused'] as const).map((filterKey) => (
                     <button
                       key={filterKey}
-                      onClick={() => setAttendanceFilter(filterKey)}
-                      className={`px-3 py-1 rounded-lg font-bold capitalize transition-all ${
-                        attendanceFilter === filterKey
-                          ? 'bg-amber-500 text-red-950 shadow-xs'
-                          : 'bg-white text-slate-600 hover:bg-slate-200'
+                      onClick={() => setAttendanceStatusFilter(filterKey)}
+                      className={`px-3 py-1.5 rounded-xl font-bold transition-all ${
+                        attendanceStatusFilter === filterKey
+                          ? 'bg-amber-500 text-red-950 shadow-xs font-extrabold'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                       }`}
                     >
                       {filterKey === 'all' && 'ሁሉም'}
-                      {filterKey === 'unmarked' && 'ያልተመዘገቡ'}
+                      {filterKey === 'unmarked' && 'ያልተመዘገበ'}
                       {filterKey === 'present' && 'ተገኝቷል'}
                       {filterKey === 'absent' && 'አልተገኘም'}
                       {filterKey === 'excused' && 'በምክንያት'}
@@ -947,113 +704,155 @@ export const AdminDashboard: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Summary Badges */}
-                <div className="flex items-center gap-3 font-semibold">
-                  <span className="text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
-                    ተገኝቷል፡ {Object.values(markedMap).filter((v) => v === 'present').length}
-                  </span>
-                  <span className="text-red-700 bg-red-100 px-2.5 py-0.5 rounded-full">
-                    አልተገኘም፡ {Object.values(markedMap).filter((v) => v === 'absent').length}
-                  </span>
-                  <span className="text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full">
-                    በምክንያት፡ {Object.values(markedMap).filter((v) => v === 'excused').length}
-                  </span>
-                </div>
               </div>
 
-              {/* Attendance Marking Student List */}
+              {/* Student Attendance List */}
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="divide-y divide-slate-100">
-                  {activeStudents
-                    .filter((student) => {
-                      if (selectedClass !== 'ሁሉም ክፍሎች' && student.classId !== selectedClass) return false;
-                      const status = markedMap[student.studentId];
-                      if (attendanceFilter === 'unmarked') return !status;
-                      if (attendanceFilter === 'present') return status === 'present';
-                      if (attendanceFilter === 'absent') return status === 'absent';
-                      if (attendanceFilter === 'excused') return status === 'excused';
-                      return true;
-                    })
-                    .map((student) => {
-                      const currentStatus = markedMap[student.studentId];
+                  {filteredStudents.length === 0 ? (
+                    <div className="text-center py-10 text-slate-500">
+                      ምንም የተማሪ መረጃ አልተገኘም።
+                    </div>
+                  ) : (
+                    filteredStudents.map((student) => {
+                      const statusEntry = markedMap[student.studentId] || {};
+                      const currentStatus = statusEntry.status;
 
                       return (
                         <div
                           key={student.studentId}
-                          className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50 transition-colors"
+                          className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50 transition-colors"
                         >
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-slate-800 text-sm">
-                                {student.fullName}
-                              </span>
-                              <span className="font-mono text-xs text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                                {student.studentId}
-                              </span>
+                          {/* Student Profile Info */}
+                          <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-900 border border-amber-300 font-mono font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                              {student.studentId}
                             </div>
-                            <div className="text-xs text-slate-500 mt-0.5 flex gap-3">
-                              <span>ክፍል፡ {student.classId}</span>
-                              <span>ዕድሜ፡ {student.age} ዓመት</span>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-slate-900 text-base">
+                                  {student.fullName}
+                                </span>
+                                {student.status === 'inactive' && (
+                                  <span className="text-[10px] font-bold bg-slate-200 text-slate-600 px-2 py-0.5 rounded">
+                                    ያልተገለገለ
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-3">
+                                <span>ዕድሜ፡ {student.age} ዓመት</span>
+                                {student.phoneNumber && <span>ስልክ፡ {student.phoneNumber}</span>}
+                                {student.guardianPhone && <span>የወላጅ ስልክ፡ {student.guardianPhone}</span>}
+                              </div>
                             </div>
                           </div>
 
-                          {/* Status Toggles */}
-                          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 self-start sm:self-auto">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setMarkedMap({ ...markedMap, [student.studentId]: 'present' })
-                              }
-                              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
-                                currentStatus === 'present'
-                                  ? 'bg-emerald-600 text-white shadow-sm'
-                                  : 'text-slate-600 hover:text-emerald-700'
-                              }`}
-                            >
-                              <CheckCircle className="w-3.5 h-3.5" />
-                              <span>ተገኝቷል</span>
-                            </button>
+                          {/* Attendance Controls */}
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                            
+                            {/* 3 Clear Amharic Buttons */}
+                            <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+                              <button
+                                type="button"
+                                onClick={() => handleSetStudentStatus(student.studentId, 'present')}
+                                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                                  currentStatus === 'present'
+                                    ? 'bg-emerald-600 text-white shadow-sm'
+                                    : 'text-slate-700 hover:text-emerald-700 hover:bg-emerald-50'
+                                }`}
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>ተገኝቷል</span>
+                              </button>
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setMarkedMap({ ...markedMap, [student.studentId]: 'absent' })
-                              }
-                              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
-                                currentStatus === 'absent'
-                                  ? 'bg-red-600 text-white shadow-sm'
-                                  : 'text-slate-600 hover:text-red-700'
-                              }`}
-                            >
-                              <XCircle className="w-3.5 h-3.5" />
-                              <span>አልተገኘም</span>
-                            </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSetStudentStatus(student.studentId, 'absent')}
+                                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                                  currentStatus === 'absent'
+                                    ? 'bg-red-600 text-white shadow-sm'
+                                    : 'text-slate-700 hover:text-red-700 hover:bg-red-50'
+                                }`}
+                              >
+                                <XCircle className="w-3.5 h-3.5" />
+                                <span>አልተገኘም</span>
+                              </button>
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setMarkedMap({ ...markedMap, [student.studentId]: 'excused' })
-                              }
-                              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
-                                currentStatus === 'excused'
-                                  ? 'bg-amber-600 text-white shadow-sm'
-                                  : 'text-slate-600 hover:text-amber-700'
-                              }`}
-                            >
-                              <Clock className="w-3.5 h-3.5" />
-                              <span>በምክንያት</span>
-                            </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSetStudentStatus(student.studentId, 'excused')}
+                                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                                  currentStatus === 'excused'
+                                    ? 'bg-amber-600 text-white shadow-sm'
+                                    : 'text-slate-700 hover:text-amber-700 hover:bg-amber-50'
+                                }`}
+                              >
+                                <Clock className="w-3.5 h-3.5" />
+                                <span>በምክንያት</span>
+                              </button>
+                            </div>
+
+                            {/* Unmarked Status Indicator */}
+                            {!currentStatus && (
+                              <span className="text-xs text-slate-400 font-semibold px-2 py-1 rounded bg-slate-100 border border-slate-200">
+                                ያልተመዘገበ
+                              </span>
+                            )}
+
+                            {/* Optional Reason Input when "በምክንያት" is selected */}
+                            {currentStatus === 'excused' && (
+                              <input
+                                type="text"
+                                value={statusEntry.reason || ''}
+                                onChange={(e) => handleSetExcusedReason(student.studentId, e.target.value)}
+                                placeholder="ምክንያት (የታመመ፣ ወዘተ...)"
+                                className="px-3 py-1.5 rounded-xl border border-amber-300 text-xs text-slate-800 bg-amber-50/60 focus:bg-white outline-none w-full sm:w-48"
+                              />
+                            )}
+
+                            {/* Individual Student Action Controls */}
+                            <div className="flex items-center gap-1 border-l border-slate-200 pl-2">
+                              <button
+                                onClick={() => setSelectedStudentForHistory(student)}
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-amber-900 hover:bg-amber-50 transition-colors"
+                                title="የመገኘት ታሪክ"
+                              >
+                                <History className="w-4 h-4" />
+                              </button>
+
+                              <button
+                                onClick={() => setEditingStudent(student)}
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-amber-900 hover:bg-amber-50 transition-colors"
+                                title="መረጃ አስተካክል"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+
+                              <button
+                                onClick={() => handleToggleStudentStatus(student)}
+                                className={`p-1.5 rounded-lg transition-colors ${
+                                  student.status === 'active'
+                                    ? 'text-red-600 hover:bg-red-50'
+                                    : 'text-emerald-600 hover:bg-emerald-50'
+                                }`}
+                                title={student.status === 'active' ? 'አቦዝን' : 'አንቀሳቅስ'}
+                              >
+                                {student.status === 'active' ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+                              </button>
+                            </div>
+
                           </div>
                         </div>
                       );
-                    })}
+                    })
+                  )}
                 </div>
               </div>
 
-              {/* Bottom Floating Save Bar */}
+              {/* Bottom Floating Save Button */}
               <div className="bg-white p-4 rounded-2xl shadow-lg border border-slate-200 flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-600">
-                  የቀን {selectedMeetingDate} የመገኘት መዝገብን ለማስቀመጥ ወይም ለማዘመን ይጫኑ።
+                  የቀን {selectedMeetingDate} አቴንዳንስ መዝገብን ለማስቀመጥ ይጫኑ።
                 </span>
                 <button
                   onClick={handleSaveAttendance}
@@ -1063,193 +862,497 @@ export const AdminDashboard: React.FC = () => {
                   {savingAttendance ? (
                     <Loader2 className="w-4 h-4 animate-spin text-amber-300" />
                   ) : (
-                    <CheckCircle className="w-4 h-4 text-emerald-400" />
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                   )}
-                  <span>መገኘትን መዝግብ</span>
+                  <span>አቴንዳንስ መዝግብ / አስቀምጥ</span>
                 </button>
+              </div>
+
+            </div>
+          )}
+
+          {/* TAB 2: ATTENDANCE REPORTS (የአቴንዳንስ ሪፖርት) */}
+          {activeMainTab === 'reports' && (
+            <div className="space-y-6 animate-fade-in">
+              
+              {/* Reports Sub-Navigation & Export PNG Action */}
+              <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
+                
+                <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
+                  <button
+                    onClick={() => setReportSubTab('overall')}
+                    className={`px-4 py-2 rounded-xl transition-all ${
+                      reportSubTab === 'overall'
+                        ? 'bg-amber-500 text-red-950 font-extrabold shadow-xs'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    ሀ. አጠቃላይ ሪፖርት
+                  </button>
+
+                  <button
+                    onClick={() => setReportSubTab('individual')}
+                    className={`px-4 py-2 rounded-xl transition-all ${
+                      reportSubTab === 'individual'
+                        ? 'bg-amber-500 text-red-950 font-extrabold shadow-xs'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    ለ. ነጠላ የተማሪ ሪፖርት
+                  </button>
+
+                  <button
+                    onClick={() => setReportSubTab('monthly')}
+                    className={`px-4 py-2 rounded-xl transition-all ${
+                      reportSubTab === 'monthly'
+                        ? 'bg-amber-500 text-red-950 font-extrabold shadow-xs'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    ሐ. ወርሃዊ ሪፖርት
+                  </button>
+
+                  <button
+                    onClick={() => setReportSubTab('ranking')}
+                    className={`px-4 py-2 rounded-xl transition-all ${
+                      reportSubTab === 'ranking'
+                        ? 'bg-amber-500 text-red-950 font-extrabold shadow-xs'
+                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    መ. የተማሪዎች ደረጃ (Ranking)
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => handleExportPNG(reportSubTab)}
+                  disabled={isExportingPNG}
+                  className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-red-950 font-extrabold text-xs flex items-center gap-2 transition-all shadow border border-amber-400/60 disabled:opacity-50"
+                >
+                  {isExportingPNG ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-red-950" />
+                  ) : (
+                    <Image className="w-4 h-4" />
+                  )}
+                  <span>ሪፖርት በ PNG አውርድ</span>
+                </button>
+
+              </div>
+
+              {/* Printable PNG Report Capture Area */}
+              <div ref={reportCaptureRef} className="p-6 bg-white rounded-2xl shadow-sm border border-slate-200 space-y-6">
+                
+                {/* Clean Official Report Header in PNG */}
+                <div className="border-b-2 border-amber-500/40 pb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <EthiopianOrthodoxCross className="w-8 h-8 text-amber-700" />
+                    <div>
+                      <h3 className="text-xl font-bold text-red-950 font-serif">
+                        ፍሬ ሃይማኖት ሰንበት ትምህርት ቤት
+                      </h3>
+                      <p className="text-xs text-slate-600 font-medium">
+                        የአቴንዳንስ ሪፖርት — {new Date().toLocaleDateString('am-ET')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* A. OVERALL REPORT */}
+                {reportSubTab === 'overall' && (
+                  <div className="space-y-6">
+                    <h4 className="text-lg font-bold text-slate-900 font-serif border-b pb-2">
+                      ሀ. አጠቃላይ የአቴንዳንስ ሪፖርት (Overall Attendance Report)
+                    </h4>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-center">
+                        <p className="text-xs font-semibold text-slate-500 uppercase">ጠቅላላ ተማሪዎች</p>
+                        <h4 className="text-3xl font-extrabold text-slate-900 font-mono mt-1">
+                          {activeStudents.length}
+                        </h4>
+                      </div>
+
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-center">
+                        <p className="text-xs font-semibold text-slate-500 uppercase">የስብሰባዎች ብዛት</p>
+                        <h4 className="text-3xl font-extrabold text-slate-900 font-mono mt-1">
+                          {totalRecordedSessionsCount}
+                        </h4>
+                      </div>
+
+                      <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200 text-center">
+                        <p className="text-xs font-semibold text-emerald-800 uppercase">የተገኘበት ብዛት</p>
+                        <h4 className="text-3xl font-extrabold text-emerald-800 font-mono mt-1">
+                          {totalPresentRecordsCount}
+                        </h4>
+                      </div>
+
+                      <div className="bg-amber-50 p-4 rounded-xl border border-amber-300 text-center">
+                        <p className="text-xs font-semibold text-amber-950 uppercase">አጠቃላይ የመገኘት መጠን</p>
+                        <h4 className="text-3xl font-extrabold text-amber-950 font-mono mt-1">
+                          {overallAttendancePercentage}%
+                        </h4>
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                      <h5 className="font-bold text-sm text-slate-800 mb-3">የመገኘት ስታቲስቲክስ ክፍፍል</h5>
+                      <div className="h-6 w-full bg-slate-200 rounded-full overflow-hidden flex">
+                        <div
+                          style={{ width: `${overallAttendancePercentage}%` }}
+                          className="bg-emerald-600 h-full"
+                          title="የተገኙ"
+                        />
+                        <div
+                          style={{
+                            width: `${
+                              totalAllRecordsCount > 0
+                                ? Math.round((totalAbsentRecordsCount / totalAllRecordsCount) * 100)
+                                : 0
+                            }%`,
+                          }}
+                          className="bg-red-600 h-full"
+                          title="የቀሩ"
+                        />
+                        <div
+                          style={{
+                            width: `${
+                              totalAllRecordsCount > 0
+                                ? Math.round((totalExcusedRecordsCount / totalAllRecordsCount) * 100)
+                                : 0
+                            }%`,
+                          }}
+                          className="bg-amber-500 h-full"
+                          title="በምክንያት"
+                        />
+                      </div>
+                      <div className="flex justify-between text-xs text-slate-600 mt-2 font-medium">
+                        <span className="text-emerald-700">● የተገኙ፡ {totalPresentRecordsCount}</span>
+                        <span className="text-red-700">● የቀሩ፡ {totalAbsentRecordsCount}</span>
+                        <span className="text-amber-800">● በምክንያት፡ {totalExcusedRecordsCount}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* B. INDIVIDUAL STUDENT REPORT */}
+                {reportSubTab === 'individual' && (
+                  <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3">
+                      <h4 className="text-lg font-bold text-slate-900 font-serif">
+                        ለ. ነጠላ የተማሪ ሪፖርት (Individual Student Report)
+                      </h4>
+
+                      <select
+                        value={activeReportStudent?.studentId || ''}
+                        onChange={(e) => setSelectedReportStudentId(e.target.value)}
+                        className="px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white outline-none font-bold"
+                      >
+                        {activeStudents.map((s) => (
+                          <option key={s.studentId} value={s.studentId}>
+                            {s.fullName} ({s.studentId})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {activeReportStudent ? (
+                      <div className="space-y-4">
+                        <div className="bg-amber-50/60 p-4 rounded-xl border border-amber-200 flex flex-wrap justify-between items-center gap-3">
+                          <div>
+                            <h4 className="font-bold text-base text-slate-900">{activeReportStudent.fullName}</h4>
+                            <p className="text-xs text-slate-600">
+                              መለያ ቁጥር፡ <span className="font-mono font-bold text-amber-900">{activeReportStudent.studentId}</span> | ዕድሜ፡ {activeReportStudent.age} ዓመት
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-2xl font-extrabold text-amber-950 font-mono">
+                              {indPct}%
+                            </span>
+                            <p className="text-xs text-slate-500 font-medium">የመገኘት መጠን</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-3 text-center text-xs">
+                          <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-emerald-800 font-bold">
+                            የተገኙበት፡ <span className="font-mono text-base">{indPresent}</span>
+                          </div>
+                          <div className="p-3 bg-red-50 rounded-xl border border-red-200 text-red-800 font-bold">
+                            የቀሩበት፡ <span className="font-mono text-base">{indAbsent}</span>
+                          </div>
+                          <div className="p-3 bg-amber-50 rounded-xl border border-amber-300 text-amber-950 font-bold">
+                            በምክንያት፡ <span className="font-mono text-base">{indExcused}</span>
+                          </div>
+                        </div>
+
+                        <div className="divide-y divide-slate-100 border rounded-xl overflow-hidden text-xs">
+                          <div className="bg-slate-100 p-3 font-bold text-slate-700">የአቴንዳንስ ታሪክ በቅደም ተከተል</div>
+                          {activeStudentRecords.length === 0 ? (
+                            <div className="p-4 text-center text-slate-500">ምንም የተመዘገበ ታሪክ አልተገኘም።</div>
+                          ) : (
+                            activeStudentRecords.map((r) => (
+                              <div key={r.recordId} className="p-3 flex items-center justify-between">
+                                <span className="font-mono font-bold text-slate-800">{r.meetingDate}</span>
+                                <div className="flex items-center gap-2">
+                                  {r.excusedReason && (
+                                    <span className="text-slate-500 italic font-normal">({r.excusedReason})</span>
+                                  )}
+                                  <span
+                                    className={`font-bold px-2.5 py-0.5 rounded-full ${
+                                      r.status === 'present'
+                                        ? 'bg-emerald-100 text-emerald-800'
+                                        : r.status === 'absent'
+                                        ? 'bg-red-100 text-red-800'
+                                        : 'bg-amber-100 text-amber-900'
+                                    }`}
+                                  >
+                                    {r.status === 'present' && 'ተገኝቷል'}
+                                    {r.status === 'absent' && 'አልተገኘም'}
+                                    {r.status === 'excused' && 'በምክንያት'}
+                                  </span>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-center py-6 text-slate-500">እባክዎን ተማሪ ይምረጡ።</p>
+                    )}
+                  </div>
+                )}
+
+                {/* C. MONTHLY REPORT */}
+                {reportSubTab === 'monthly' && (
+                  <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3">
+                      <h4 className="text-lg font-bold text-slate-900 font-serif">
+                        ሐ. ወርሃዊ የአቴንዳንስ ሪፖርት (Monthly Attendance Report)
+                      </h4>
+
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={selectedReportMonth}
+                          onChange={(e) => setSelectedReportMonth(Number(e.target.value))}
+                          className="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold"
+                        >
+                          {ETHIOPIC_MONTHS.map((mName, idx) => (
+                            <option key={mName} value={idx + 1}>
+                              {mName} ({idx + 1}ኛው ወር)
+                            </option>
+                          ))}
+                        </select>
+
+                        <select
+                          value={selectedReportYear}
+                          onChange={(e) => setSelectedReportYear(Number(e.target.value))}
+                          className="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold font-mono"
+                        >
+                          {[2025, 2026, 2027].map((y) => (
+                            <option key={y} value={y}>
+                              {y}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-slate-100 font-bold text-slate-700">
+                            <th className="p-3">መለያ ቁጥር</th>
+                            <th className="p-3">ተማሪ ስም</th>
+                            <th className="p-3 text-center">የተገኙበት</th>
+                            <th className="p-3 text-center">የቀሩበት</th>
+                            <th className="p-3 text-center">በምክንያት</th>
+                            <th className="p-3 text-center">የወሩ የመገኘት መጠን (%)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {monthlyStudentStats.map((item) => (
+                            <tr key={item.student.studentId} className="hover:bg-slate-50">
+                              <td className="p-3 font-mono font-bold text-amber-900">{item.student.studentId}</td>
+                              <td className="p-3 font-bold text-slate-800">{item.student.fullName}</td>
+                              <td className="p-3 text-center font-bold text-emerald-700 font-mono">{item.present}</td>
+                              <td className="p-3 text-center font-bold text-red-700 font-mono">{item.absent}</td>
+                              <td className="p-3 text-center font-bold text-amber-800 font-mono">{item.excused}</td>
+                              <td className="p-3 text-center font-extrabold font-mono text-slate-900">{item.percentage}%</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* D. RANKING REPORT */}
+                {reportSubTab === 'ranking' && (
+                  <div className="space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3">
+                      <h4 className="text-lg font-bold text-slate-900 font-serif">
+                        መ. የተማሪዎች የመገኘት ደረጃ (Overall Student Ranking)
+                      </h4>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setRankingMode('overall')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                            rankingMode === 'overall'
+                              ? 'bg-amber-500 text-red-950 font-extrabold shadow-xs'
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                        >
+                          የጠቅላላ ጊዜ ደረጃ
+                        </button>
+                        <button
+                          onClick={() => setRankingMode('monthly')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                            rankingMode === 'monthly'
+                              ? 'bg-amber-500 text-red-950 font-extrabold shadow-xs'
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                        >
+                          የወሩ ደረጃ
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      {rankedStudents.length === 0 ? (
+                        <p className="text-center py-6 text-slate-500 text-xs">
+                          ደረጃ ለማውጣት በቂ የመገኘት መዝገብ አልተገኘም።
+                        </p>
+                      ) : (
+                        rankedStudents.map((item, index) => {
+                          const rankNum = index + 1;
+                          return (
+                            <div
+                              key={item.student.studentId}
+                              className={`p-4 rounded-xl border flex items-center justify-between text-xs ${
+                                rankNum === 1
+                                  ? 'bg-amber-100/80 border-amber-400 font-bold text-amber-950'
+                                  : rankNum === 2
+                                  ? 'bg-slate-100 border-slate-300 font-semibold text-slate-800'
+                                  : rankNum === 3
+                                  ? 'bg-amber-50 border-amber-200 text-amber-900'
+                                  : 'bg-white border-slate-200 text-slate-800'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <span
+                                  className={`w-7 h-7 rounded-full flex items-center justify-center font-extrabold font-mono text-xs ${
+                                    rankNum === 1
+                                      ? 'bg-amber-500 text-red-950'
+                                      : rankNum === 2
+                                      ? 'bg-slate-300 text-slate-800'
+                                      : rankNum === 3
+                                      ? 'bg-amber-200 text-amber-900'
+                                      : 'bg-slate-100 text-slate-600'
+                                  }`}
+                                >
+                                  {rankNum}
+                                </span>
+                                <div>
+                                  <span className="font-bold text-sm">{item.student.fullName}</span>
+                                  <span className="ml-2 font-mono text-slate-500">({item.student.studentId})</span>
+                                </div>
+                              </div>
+
+                              <div className="text-right">
+                                <span className="text-base font-extrabold font-mono">{item.percentage}%</span>
+                                <p className="text-[10px] text-slate-500">
+                                  {item.present} የተገኙ / {item.total} ቀናት
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+
               </div>
             </div>
           )}
 
-          {/* TAB 4: ATTENDANCE REPORTS */}
-          {activeSubTab === 'reports' && (
-            <div className="space-y-6 animate-fade-in">
-              {/* Report Controls */}
-              <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
-                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 mb-1">ከቀን</label>
-                    <input
-                      type="date"
-                      value={reportStartDate}
-                      onChange={(e) => setReportStartDate(e.target.value)}
-                      className="px-3 py-2 rounded-xl border border-slate-300 font-mono text-sm bg-white outline-none"
-                    />
-                  </div>
+          {/* TAB 3: SETTINGS (ቅንብሮች) */}
+          {activeMainTab === 'settings' && (
+            <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
+              <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+                
+                <h3 className="text-lg font-bold text-slate-900 font-serif border-b pb-3 flex items-center gap-2">
+                  <Settings className="w-5 h-5 text-amber-700" />
+                  <span>የአስተዳዳሪ ቅንብሮች (Settings)</span>
+                </h3>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 mb-1">እስከ ቀን</label>
-                    <input
-                      type="date"
-                      value={reportEndDate}
-                      onChange={(e) => setReportEndDate(e.target.value)}
-                      className="px-3 py-2 rounded-xl border border-slate-300 font-mono text-sm bg-white outline-none"
-                    />
+                {/* Admin Profile Info */}
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 text-sm">
+                  <h4 className="font-bold text-slate-800">1. የአስተዳዳሪ መለያ መረጃ</h4>
+                  <div className="flex justify-between border-b border-slate-200 pb-2 text-xs">
+                    <span className="text-slate-500">የተጠቃሚ ስም/ኢሜይል፡</span>
+                    <span className="font-bold text-slate-800 font-mono">
+                      {currentUser?.email || 'superadmin'}
+                    </span>
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 mb-1">ክፍል</label>
-                    <select
-                      value={reportClass}
-                      onChange={(e) => setReportClass(e.target.value)}
-                      className="px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white outline-none"
-                    >
-                      <option value="ሁሉም ክፍሎች">ሁሉም ክፍሎች</option>
-                      {CLASS_OPTIONS.map((cls) => (
-                        <option key={cls} value={cls}>
-                          {cls}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="flex justify-between border-b border-slate-200 pb-2 text-xs">
+                    <span className="text-slate-500">ሚና (Role)፡</span>
+                    <span className="font-bold text-emerald-700">ዋና አስተዳዳሪ (Administrator)</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-500">የዳታቤዝ ሁኔታ፡</span>
+                    <span className="font-bold text-emerald-700 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> የተገናኘ (Cloud Firestore)
+                    </span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleExportAttendanceReportCSV}
-                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center gap-1.5 transition-colors border border-slate-300"
-                  >
-                    <Download className="w-4 h-4 text-emerald-700" />
-                    <span>CSV ሪፖርት አውርድ</span>
-                  </button>
+                {/* Organization Details */}
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 text-xs">
+                  <h4 className="font-bold text-slate-800 text-sm">2. የሰንበት ትምህርት ቤት መረጃ</h4>
+                  <p><span className="font-semibold text-slate-600">ስም፡</span> ፍሬ ሃይማኖት ሰንበት ትምህርት ቤት</p>
+                  <p><span className="font-semibold text-slate-600">የስርዓት አይነት፡</span> የተማሪዎች ምዝገባ እና የመገኘት መዝገብ ማስተዳደሪያ</p>
+                </div>
 
+                {/* Logout Action */}
+                <div className="pt-2">
                   <button
-                    onClick={() => window.print()}
-                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-red-950 font-bold text-xs flex items-center gap-1.5 transition-colors"
+                    onClick={logout}
+                    className="w-full py-3 rounded-xl bg-red-950 hover:bg-red-900 text-amber-200 font-bold text-sm shadow transition-all flex items-center justify-center gap-2 border border-amber-500/40"
                   >
-                    <Printer className="w-4 h-4" />
-                    <span>ሪፖርት አትም</span>
+                    <LogOut className="w-4 h-4 text-amber-300" />
+                    <span>ከአስተዳዳሪ መለያው ውጣ (Logout)</span>
                   </button>
                 </div>
-              </div>
 
-              {/* Summary Stats */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-white p-4 rounded-xl border border-slate-200 text-center">
-                  <p className="text-xs text-slate-500 font-semibold uppercase">የስብሰባዎች ብዛት</p>
-                  <h4 className="text-2xl font-bold text-slate-800 font-mono">{totalSessionsInReport}</h4>
-                </div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 text-center">
-                  <p className="text-xs text-slate-500 font-semibold uppercase">ተማሪዎች በሪፖርት</p>
-                  <h4 className="text-2xl font-bold text-slate-800 font-mono">{studentReportList.length}</h4>
-                </div>
-                <div className="bg-white p-4 rounded-xl border border-slate-200 text-center">
-                  <p className="text-xs text-red-600 font-semibold uppercase">በተደጋጋሚ የቀሩ ተማሪዎች (&lt;50%)</p>
-                  <h4 className="text-2xl font-bold text-red-700 font-mono">
-                    {studentReportList.filter((s) => s.isFrequentAbsentee).length}
-                  </h4>
-                </div>
-              </div>
-
-              {/* Attendance Report Table */}
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                  <h3 className="font-bold text-slate-800 text-sm font-serif">
-                    የተማሪዎች የመገኘት መጠን ሪፖርት ({reportStartDate} እስከ {reportEndDate})
-                  </h3>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm border-collapse">
-                    <thead>
-                      <tr className="bg-slate-100 text-slate-600 font-bold text-xs uppercase">
-                        <th className="p-3.5">መለያ ቁጥር</th>
-                        <th className="p-3.5">ሙሉ ስም</th>
-                        <th className="p-3.5">ክፍል</th>
-                        <th className="p-3.5 text-center">የተገኙበት</th>
-                        <th className="p-3.5 text-center">የቀሩበት</th>
-                        <th className="p-3.5 text-center">በምክንያት</th>
-                        <th className="p-3.5 text-center">የመገኘት መጠን (%)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {studentReportList.map((item) => (
-                        <tr
-                          key={item.student.studentId}
-                          className={`hover:bg-slate-50 ${
-                            item.isFrequentAbsentee ? 'bg-red-50/50' : ''
-                          }`}
-                        >
-                          <td className="p-3.5 font-mono font-bold text-amber-900">
-                            {item.student.studentId}
-                          </td>
-                          <td className="p-3.5 font-medium flex items-center gap-2">
-                            <span>{item.student.fullName}</span>
-                            {item.isFrequentAbsentee && (
-                              <span
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-800 border border-red-300"
-                                title="በተደጋጋሚ የቀረ ተማሪ"
-                              >
-                                <AlertTriangle className="w-3 h-3" /> በተደጋጋሚ የቀረ
-                              </span>
-                            )}
-                          </td>
-                          <td className="p-3.5 text-xs text-slate-600">{item.student.classId}</td>
-                          <td className="p-3.5 text-center text-emerald-700 font-bold font-mono">
-                            {item.presentCount}
-                          </td>
-                          <td className="p-3.5 text-center text-red-700 font-bold font-mono">
-                            {item.absentCount}
-                          </td>
-                          <td className="p-3.5 text-center text-amber-800 font-bold font-mono">
-                            {item.excusedCount}
-                          </td>
-                          <td className="p-3.5 text-center font-extrabold font-mono">
-                            <span
-                              className={`px-2.5 py-1 rounded-full text-xs ${
-                                item.percentage >= 75
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : item.percentage >= 50
-                                  ? 'bg-amber-100 text-amber-800'
-                                  : 'bg-red-100 text-red-800'
-                              }`}
-                            >
-                              {item.percentage}%
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
               </div>
             </div>
           )}
         </>
       )}
 
-      {/* MODAL 1: Student Attendance History */}
+      {/* MODAL 1: Student Attendance History Modal */}
       {selectedStudentForHistory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-300 max-w-lg w-full overflow-hidden">
             <div className="bg-red-950 text-white p-5 flex items-center justify-between border-b border-amber-500/30">
               <div>
-                <h3 className="font-bold text-amber-200 text-base">የተማሪ የመገኘት ታሪክ</h3>
-                <p className="text-xs text-amber-100/80">
+                <h3 className="font-bold text-amber-200 text-base font-serif">የተማሪ የመገኘት ታሪክ</h3>
+                <p className="text-xs text-amber-100/80 mt-0.5">
                   {selectedStudentForHistory.fullName} ({selectedStudentForHistory.studentId})
                 </p>
               </div>
               <button
                 onClick={() => setSelectedStudentForHistory(null)}
-                className="p-1 rounded text-amber-200 hover:text-white hover:bg-red-900"
+                className="p-1 rounded text-amber-200 hover:text-white"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-5 max-h-96 overflow-y-auto space-y-2">
+            <div className="p-5 max-h-96 overflow-y-auto space-y-2 text-xs">
               {records.filter((r) => r.studentId === selectedStudentForHistory.studentId).length === 0 ? (
-                <p className="text-center py-6 text-xs text-slate-500">
+                <p className="text-center py-6 text-slate-500">
                   እስካሁን ምንም የተመዘገበ የመገኘት ታሪክ አልተገኘም።
                 </p>
               ) : (
@@ -1259,21 +1362,26 @@ export const AdminDashboard: React.FC = () => {
                   .map((rec) => (
                     <div
                       key={rec.recordId}
-                      className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-xs"
+                      className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between"
                     >
-                      <span className="font-mono font-bold text-slate-800">{rec.meetingDate}</span>
+                      <div>
+                        <span className="font-mono font-bold text-slate-800">{rec.meetingDate}</span>
+                        {rec.excusedReason && (
+                          <span className="ml-2 text-slate-500 italic">({rec.excusedReason})</span>
+                        )}
+                      </div>
                       <span
                         className={`font-bold px-2.5 py-0.5 rounded-full ${
                           rec.status === 'present'
                             ? 'bg-emerald-100 text-emerald-800'
                             : rec.status === 'absent'
                             ? 'bg-red-100 text-red-800'
-                            : 'bg-amber-100 text-amber-800'
+                            : 'bg-amber-100 text-amber-900'
                         }`}
                       >
                         {rec.status === 'present' && 'ተገኝቷል'}
                         {rec.status === 'absent' && 'አልተገኘም'}
-                        {rec.status === 'excused' && 'በምክንያት ቀርቷል'}
+                        {rec.status === 'excused' && 'በምክንያት'}
                       </span>
                     </div>
                   ))
@@ -1288,7 +1396,7 @@ export const AdminDashboard: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-300 max-w-md w-full overflow-hidden">
             <div className="bg-red-950 text-white p-5 flex items-center justify-between border-b border-amber-500/30">
-              <h3 className="font-bold text-amber-200 text-base">የተማሪ መረጃ ማስተካከያ</h3>
+              <h3 className="font-bold text-amber-200 text-base font-serif">የተማሪ መረጃ ማስተካከያ</h3>
               <button
                 onClick={() => setEditingStudent(null)}
                 className="p-1 rounded text-amber-200 hover:text-white"
@@ -1335,21 +1443,6 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-bold text-xs text-slate-700 mb-1">ክፍል</label>
-                <select
-                  value={editingStudent.classId || CLASS_OPTIONS[0]}
-                  onChange={(e) => setEditingStudent({ ...editingStudent, classId: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-800 outline-none bg-white"
-                >
-                  {CLASS_OPTIONS.map((cls) => (
-                    <option key={cls} value={cls}>
-                      {cls}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
                 <label className="block font-bold text-xs text-slate-700 mb-1">ስልክ ቁጥር</label>
                 <input
                   type="tel"
@@ -1381,7 +1474,7 @@ export const AdminDashboard: React.FC = () => {
                   type="submit"
                   className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-red-950 font-bold text-xs shadow"
                 >
-                  ለወጣቶችን መረጃ አስቀምጥ
+                  መረጃውን አስቀምጥ
                 </button>
               </div>
             </form>
@@ -1389,7 +1482,7 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL 3: Manual Student Registration by Admin */}
+      {/* MODAL 3: Manual Student Add Modal */}
       {showManualAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-300 max-w-md w-full overflow-hidden">
@@ -1449,23 +1542,8 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               <div>
-                <label className="block font-bold text-xs text-slate-700 mb-1">4. ክፍል</label>
-                <select
-                  value={manualClass}
-                  onChange={(e) => setManualClass(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-800 outline-none bg-white"
-                >
-                  {CLASS_OPTIONS.map((cls) => (
-                    <option key={cls} value={cls}>
-                      {cls}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
                 <label className="block font-bold text-xs text-slate-700 mb-1">
-                  5. ስልክ ቁጥር (አማራጭ)
+                  4. ስልክ ቁጥር (አማራጭ)
                 </label>
                 <input
                   type="tel"
@@ -1478,7 +1556,7 @@ export const AdminDashboard: React.FC = () => {
 
               <div>
                 <label className="block font-bold text-xs text-slate-700 mb-1">
-                  6. የወላጅ ስልክ (አማራጭ)
+                  5. የወላጅ ስልክ (አማራጭ)
                 </label>
                 <input
                   type="tel"

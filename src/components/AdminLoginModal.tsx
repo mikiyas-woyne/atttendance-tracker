@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, Lock, UserCheck, KeyRound, AlertCircle, Loader2, X, Sparkles, CheckCircle2 } from 'lucide-react';
+import { EthiopianOrthodoxCross } from './EthiopianOrthodoxCross';
+import { ShieldCheck, Lock, UserCheck, KeyRound, AlertCircle, Loader2, X } from 'lucide-react';
 
 interface AdminLoginModalProps {
   isOpen: boolean;
@@ -91,7 +92,7 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
 
           <div className="text-center pt-2">
             <div className="w-12 h-12 bg-amber-500/20 border-2 border-amber-400/50 rounded-full flex items-center justify-center text-amber-300 mx-auto mb-2 shadow-inner">
-              <ShieldCheck className="w-7 h-7" />
+              <EthiopianOrthodoxCross className="w-7 h-7 text-amber-300" />
             </div>
             <h3 className="text-xl font-bold text-amber-200 font-serif">
               የአስተዳዳሪ መግቢያ
@@ -113,8 +114,8 @@ export const AdminLoginModal: React.FC<AdminLoginModalProps> = ({ isOpen, onClos
           {/* Preset Credentials Banner */}
           <div className="bg-amber-50 border border-amber-300 rounded-xl p-3.5 text-xs text-amber-950 space-y-1.5 shadow-xs">
             <div className="flex items-center justify-between">
-              <span className="font-bold flex items-center gap-1 text-amber-900">
-                <Sparkles className="w-4 h-4 text-amber-600" />
+              <span className="font-bold flex items-center gap-1.5 text-amber-900">
+                <ShieldCheck className="w-4 h-4 text-amber-700" />
                 የአስተዳዳሪ መግቢያ መረጃ (Credentials)
               </span>
               <button

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Header } from './components/Header';
 import { StudentRegistrationForm } from './components/StudentRegistrationForm';
@@ -9,9 +9,24 @@ import { Footer } from './components/Footer';
 
 const AppContent: React.FC = () => {
   const { isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<'register' | 'status' | 'admin'>('register');
-  const [statusStudentId, setStatusStudentId] = useState<string>('');
+  
+  // Check if student ID is saved on this device
+  const savedDeviceId = localStorage.getItem('my_student_id') || '';
+  
+  const [activeTab, setActiveTab] = useState<'register' | 'status' | 'admin'>(() => {
+    return savedDeviceId && !isAdmin ? 'status' : 'register';
+  });
+
+  const [statusStudentId, setStatusStudentId] = useState<string>(savedDeviceId);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (savedDeviceId && !isAdmin && activeTab === 'register') {
+      // If student has registered on this device, default to showing their attendance status
+      setActiveTab('status');
+      setStatusStudentId(savedDeviceId);
+    }
+  }, [savedDeviceId, isAdmin]);
 
   const handleSelectTab = (tab: 'register' | 'status' | 'admin') => {
     if (tab === 'admin' && !isAdmin) {
@@ -22,6 +37,7 @@ const AppContent: React.FC = () => {
   };
 
   const handleViewStatus = (studentId: string) => {
+    localStorage.setItem('my_student_id', studentId);
     setStatusStudentId(studentId);
     setActiveTab('status');
   };
@@ -46,7 +62,7 @@ const AppContent: React.FC = () => {
           <AdminDashboard />
         ) : (
           <div className="max-w-md mx-auto my-12 p-8 bg-white rounded-2xl shadow-lg border border-amber-300 text-center">
-            <h2 className="text-xl font-bold text-red-950 mb-2">የአስተዳዳሪ መግቢያ ያስፈልጋል</h2>
+            <h2 className="text-xl font-bold text-red-950 mb-2 font-serif">የአስተዳዳሪ መግቢያ ያስፈልጋል</h2>
             <p className="text-sm text-slate-600 mb-6">
               ወደ ዳሽቦርድ ለመግባት እባክዎን የአስተዳዳሪ አካውንትዎን ተጠቅመው ይግቡ።
             </p>

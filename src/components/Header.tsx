@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { UserCheck, LogIn, LogOut, ShieldCheck, UserPlus, Search } from 'lucide-react';
+import { EthiopianOrthodoxCross } from './EthiopianOrthodoxCross';
+import { LogIn, LogOut, ShieldCheck, UserPlus, Search } from 'lucide-react';
 
 interface HeaderProps {
   activeTab: 'register' | 'status' | 'admin';
@@ -13,17 +14,13 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenA
 
   return (
     <header className="bg-gradient-to-r from-red-950 via-red-900 to-amber-950 text-white shadow-xl border-b-2 border-amber-500/40 sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           
           {/* Logo / Title */}
           <div className="flex items-center space-x-3 space-x-reverse cursor-pointer" onClick={() => setActiveTab('register')}>
-            <div className="w-12 h-12 rounded-full bg-amber-500/20 border-2 border-amber-400/60 flex items-center justify-center text-amber-300 shadow-inner shrink-0">
-              {/* Ethiopian Orthodox Cross Inspired SVG */}
-              <svg className="w-7 h-7 fill-current" viewBox="0 0 24 24">
-                <path d="M11 2h2v4h4v2h-4v4h4v2h-4v8h-2v-8H7v-2h4V8H7V6h4V2z" />
-                <circle cx="12" cy="12" r="1.5" className="text-amber-200" />
-              </svg>
+            <div className="w-11 h-11 rounded-full bg-amber-500/20 border-2 border-amber-400/60 flex items-center justify-center shadow-inner shrink-0">
+              <EthiopianOrthodoxCross className="w-7 h-7 text-amber-300" />
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-amber-200 drop-shadow-sm font-serif">
@@ -41,7 +38,7 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenA
               onClick={() => setActiveTab('register')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-sm ${
                 activeTab === 'register'
-                  ? 'bg-amber-500 text-red-950 shadow-amber-500/20 font-bold'
+                  ? 'bg-amber-500 text-red-950 font-bold shadow-amber-500/20'
                   : 'bg-red-900/60 text-amber-100 hover:bg-red-800/80 border border-amber-500/30'
               }`}
             >
@@ -53,7 +50,7 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenA
               onClick={() => setActiveTab('status')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-sm ${
                 activeTab === 'status'
-                  ? 'bg-amber-500 text-red-950 shadow-amber-500/20 font-bold'
+                  ? 'bg-amber-500 text-red-950 font-bold shadow-amber-500/20'
                   : 'bg-red-900/60 text-amber-100 hover:bg-red-800/80 border border-amber-500/30'
               }`}
             >
@@ -67,7 +64,7 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, setActiveTab, onOpenA
                   onClick={() => setActiveTab('admin')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold transition-all shadow-sm ${
                     activeTab === 'admin'
-                      ? 'bg-amber-500 text-red-950 shadow-amber-500/20 font-bold'
+                      ? 'bg-amber-500 text-red-950 font-bold shadow-amber-500/20'
                       : 'bg-red-900/60 text-amber-100 hover:bg-red-800/80 border border-amber-500/30'
                   }`}
                 >
