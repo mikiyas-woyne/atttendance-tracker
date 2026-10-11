@@ -648,7 +648,6 @@ export const AdminDashboard: React.FC = () => {
                   <div className="flex flex-wrap items-center gap-1.5 bg-slate-50 p-1.5 sm:p-2 rounded-xl border border-slate-200">
                     <div className="flex items-center gap-1 text-xs font-bold text-amber-950">
                       <Calendar className="w-4 h-4 text-amber-700 shrink-0" />
-                      <span className="text-[11px] font-extrabold text-slate-600 hidden xs:inline">ቀን፡</span>
                     </div>
 
                     {/* Day Dropdown */}
@@ -756,10 +755,9 @@ export const AdminDashboard: React.FC = () => {
 
                 {/* Mobile Scrollable Filter Pills */}
                 <div className="flex items-center gap-1 overflow-x-auto pb-0.5 text-[11px] sm:text-xs no-scrollbar w-full sm:w-auto">
-                  {(['all', 'unmarked', 'present', 'absent', 'excused'] as const).map((filterKey) => {
+                  {(['all', 'present', 'absent', 'excused'] as const).map((filterKey) => {
                     let count = 0;
                     if (filterKey === 'all') count = activeStudents.length;
-                    else if (filterKey === 'unmarked') count = activeStudents.filter((s) => !markedMap[s.studentId]?.status).length;
                     else if (filterKey === 'present') count = activeStudents.filter((s) => markedMap[s.studentId]?.status === 'present').length;
                     else if (filterKey === 'absent') count = activeStudents.filter((s) => markedMap[s.studentId]?.status === 'absent').length;
                     else if (filterKey === 'excused') count = activeStudents.filter((s) => markedMap[s.studentId]?.status === 'excused').length;
@@ -776,7 +774,6 @@ export const AdminDashboard: React.FC = () => {
                       >
                         <span>
                           {filterKey === 'all' && 'ሁሉም'}
-                          {filterKey === 'unmarked' && 'ያልተመዘገበ'}
                           {filterKey === 'present' && 'ተገኝቷል'}
                           {filterKey === 'absent' && 'አልተገኘም'}
                           {filterKey === 'excused' && 'በምክንያት'}
