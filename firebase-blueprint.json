@@ -189,6 +189,48 @@
         }
       },
       "required": ["uid", "email", "role"]
+    },
+    "AbsenceAlert": {
+      "title": "AbsenceAlert",
+      "description": "Consecutive absence notification alert for administrators",
+      "type": "object",
+      "properties": {
+        "alertId": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Unique deterministic alert ID"
+        },
+        "studentId": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Target student ID"
+        },
+        "studentName": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Target student full name snapshot"
+        },
+        "consecutiveCount": {
+          "type": "number",
+          "description": "Number of consecutive missed meetings (4)"
+        },
+        "latestMissedDate": {
+          "type": "string",
+          "maxLength": 20,
+          "description": "Date of 4th consecutive missed meeting"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["unread", "read", "resolved"],
+          "description": "State of the alert"
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 40,
+          "description": "ISO timestamp of alert creation"
+        }
+      },
+      "required": ["alertId", "studentId", "studentName", "consecutiveCount", "latestMissedDate", "status"]
     }
   },
   "firestore": {
@@ -215,6 +257,12 @@
         "$ref": "#/entities/Admin"
       },
       "description": "Collection of authorized administrators"
+    },
+    "/absenceAlerts/{alertDocId}": {
+      "schema": {
+        "$ref": "#/entities/AbsenceAlert"
+      },
+      "description": "Collection of consecutive absence notifications for admins"
     }
   }
 }

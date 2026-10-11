@@ -36,5 +36,10 @@ service cloud.firestore {
     match /attendanceRecords/{recordDocId} {
       allow read, get, list, create, update, delete: if true;
     }
+
+    // Absence alerts: Admin notification management
+    match /absenceAlerts/{alertDocId} {
+      allow read, get, list, create, update, delete: if true;
+    }
   }
 }

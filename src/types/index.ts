@@ -47,6 +47,24 @@ export interface AdminUser {
   createdAt?: string;
 }
 
+export interface AbsenceAlert {
+  id?: string;
+  alertId: string;
+  studentId: string;
+  studentName: string;
+  consecutiveCount: number;
+  latestMissedDate: string;
+  missedDates: string[];
+  status: 'unread' | 'read' | 'resolved';
+  phoneNumber?: string;
+  guardianPhone?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt?: string;
+  resolvedAt?: string;
+  resolvedBy?: string;
+}
+
 export interface AttendanceStats {
   totalStudents: number;
   presentToday: number;

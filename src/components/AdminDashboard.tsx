@@ -11,9 +11,11 @@ import {
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
-import { Student, AttendanceSession, AttendanceRecord, AttendanceStatus } from '../types';
+import { Student, AttendanceSession, AttendanceRecord, AttendanceStatus, AbsenceAlert } from '../types';
 import { EthiopianOrthodoxCross } from './EthiopianOrthodoxCross';
 import { toEthiopianDate, ETHIOPIC_MONTHS, formatEthStringDate } from '../lib/ethiopianDate';
+import { detectAndCreateAbsenceAlerts } from '../lib/absenceAlertService';
+import { AbsenceNotificationModal } from './AbsenceNotificationModal';
 import html2canvas from 'html2canvas';
 import {
   Users,
@@ -41,6 +43,7 @@ import {
   Image,
   Filter,
   CheckSquare,
+  Bell,
 } from 'lucide-react';
 
 export const AdminDashboard: React.FC = () => {
@@ -53,7 +56,9 @@ export const AdminDashboard: React.FC = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [sessions, setSessions] = useState<AttendanceSession[]>([]);
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [absenceAlerts, setAbsenceAlerts] = useState<AbsenceAlert[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [showNotificationModal, setShowNotificationModal] = useState<boolean>(false);
 
   // Attendance Date (Ethiopian Calendar)
   const initialEthDate = toEthiopianDate(new Date());
@@ -155,12 +160,34 @@ export const AdminDashboard: React.FC = () => {
       }
     );
 
+    const unsubAlerts = onSnapshot(
+      collection(db, 'absenceAlerts'),
+      (snapshot) => {
+        const alertList: AbsenceAlert[] = [];
+        snapshot.forEach((docSnap) => {
+          alertList.push({ id: docSnap.id, ...docSnap.data() } as AbsenceAlert);
+        });
+        setAbsenceAlerts(alertList);
+      },
+      (error) => {
+        console.warn('Absence alerts snapshot notice:', error?.message || error);
+      }
+    );
+
     return () => {
       unsubStudents();
       unsubSessions();
       unsubRecords();
+      unsubAlerts();
     };
   }, [isAdmin, currentUser]);
+
+  // Run consecutive absence detection whenever students, sessions, or records update
+  useEffect(() => {
+    if (isAdmin && students.length > 0 && sessions.length > 0 && records.length > 0) {
+      detectAndCreateAbsenceAlerts(students, sessions, records, absenceAlerts);
+    }
+  }, [isAdmin, students, sessions, records, absenceAlerts]);
 
   // Sync Attendance Marking Map when Date or Records Change
   useEffect(() => {
@@ -533,14 +560,30 @@ export const AdminDashboard: React.FC = () => {
               </div>
             </div>
 
-            <button
-              onClick={() => setShowManualAddModal(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-500 hover:bg-amber-400 text-red-950 font-bold rounded-xl text-xs sm:text-sm shadow transition-all shrink-0 border border-amber-400/60"
-            >
-              <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span className="hidden xs:inline">+ አዲስ ተማሪ</span>
-              <span className="xs:hidden">+ አዲስ</span>
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Absence Notification Bell Icon Button */}
+              <button
+                onClick={() => setShowNotificationModal(true)}
+                className="relative p-2 sm:p-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-400/40 transition-all shrink-0 cursor-pointer"
+                title="የ4 ሳምንት ተከታታይ መቅረት ማሳወቂያዎች"
+              >
+                <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300" />
+                {absenceAlerts.filter((a) => a.status === 'unread').length > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[10px] font-extrabold w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center border-2 border-red-950 animate-pulse shadow-md">
+                    {absenceAlerts.filter((a) => a.status === 'unread').length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => setShowManualAddModal(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 bg-amber-500 hover:bg-amber-400 text-red-950 font-bold rounded-xl text-xs sm:text-sm shadow transition-all shrink-0 border border-amber-400/60"
+              >
+                <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden xs:inline">+ አዲስ ተማሪ</span>
+                <span className="xs:hidden">+ አዲስ</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1633,6 +1676,18 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* 4 Consecutive Absence Notifications Modal */}
+      <AbsenceNotificationModal
+        isOpen={showNotificationModal}
+        onClose={() => setShowNotificationModal(false)}
+        alerts={absenceAlerts}
+        students={students}
+        adminEmail={currentUser?.email || undefined}
+        onSelectStudentHistory={(student) => {
+          setSelectedStudentForHistory(student);
+        }}
+      />
 
     </div>
   );
